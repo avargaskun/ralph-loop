@@ -1,0 +1,184 @@
+#!/usr/bin/env bash
+# ralph-follow — Tail the most recent .jsonl log in ralph/logs/ and display
+# a human-readable stream of session activity.
+#
+# Automatically detects when ralph creates a new iteration log file and
+# switches to tailing it — no restart needed.
+#
+# Usage:
+#   ralph-follow                  # watches ralph/logs/ under current directory
+#   ralph-follow /path/to/logs/   # explicit logs directory
+
+set -euo pipefail
+
+LOGS_DIR="${1:-$(pwd)/ralph/logs}"
+POLL_INTERVAL=2
+
+CURRENT_FILE=""
+FOLLOWER_PID=""
+
+# Python formatter (shared across iterations)
+read -r -d '' PYTHON_FORMATTER << 'PYEOF' || true
+import json, sys, datetime
+
+GRAY = "\033[90m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+RED = "\033[31m"
+BLUE = "\033[34m"
+CYAN = "\033[36m"
+BOLD = "\033[1m"
+DIM = "\033[2m"
+RESET = "\033[0m"
+
+def truncate(s, n=200):
+    s = s.replace("\n", " ")
+    return s[:n] + "..." if len(s) > n else s
+
+def ts():
+    return datetime.datetime.now().strftime("%H:%M:%S")
+
+for raw in sys.stdin:
+    raw = raw.strip()
+    if not raw:
+        continue
+    try:
+        obj = json.loads(raw)
+    except json.JSONDecodeError:
+        continue
+
+    t = obj.get("type", "")
+
+    if t == "system":
+        sub = obj.get("subtype", "")
+        if sub == "init":
+            model = obj.get("model", "?")
+            cwd = obj.get("cwd", "?")
+            sid = obj.get("session_id", "?")[:8]
+            print(f"{GRAY}{ts()}{RESET}  {BOLD}{CYAN}SESSION START{RESET}  model={model}  cwd={cwd}  sid={sid}…")
+        elif sub == "task_started":
+            tid = obj.get("task_id", "?")
+            desc = obj.get("description", "")
+            print(f"{GRAY}{ts()}{RESET}  {CYAN}TASK STARTED{RESET}  id={tid}  {desc}")
+        else:
+            print(f"{GRAY}{ts()}{RESET}  {CYAN}SYSTEM{RESET}  {sub}")
+
+    elif t == "assistant":
+        msg = obj.get("message", {})
+        contents = msg.get("content", [])
+        for c in contents:
+            ct = c.get("type", "")
+            if ct == "thinking":
+                thought = truncate(c.get("thinking", ""), 160)
+                if thought:
+                    print(f"{GRAY}{ts()}{RESET}  {DIM}{GRAY}THINK: {thought}{RESET}")
+            elif ct == "text":
+                text = c.get("text", "")
+                print(f"{GRAY}{ts()}{RESET}  {GREEN}{text}{RESET}")
+            elif ct == "tool_use":
+                name = c.get("name", "?")
+                inp = c.get("input", {})
+                if name in ("Read", "Glob", "Grep"):
+                    path = inp.get("file_path", inp.get("pattern", inp.get("path", "")))
+                    detail = path
+                elif name == "Edit":
+                    path = inp.get("file_path", "")
+                    detail = path
+                elif name == "Write":
+                    path = inp.get("file_path", "")
+                    content_len = len(inp.get("content") or "")
+                    detail = f"{path} ({content_len} chars)"
+                elif name == "Bash":
+                    cmd = inp.get("command", "")
+                    detail = truncate(cmd, 120)
+                elif name == "Agent":
+                    detail = inp.get("description", inp.get("prompt", "")[:80])
+                else:
+                    detail = truncate(json.dumps(inp), 120)
+                print(f"{GRAY}{ts()}{RESET}  {YELLOW}TOOL: {name}{RESET}  {detail}")
+
+    elif t == "user":
+        msg = obj.get("message", {})
+        contents = msg.get("content", [])
+
+        if isinstance(contents, str):
+            print(f"{GRAY}{ts()}{RESET}  {BLUE}USER: {truncate(contents, 160)}{RESET}")
+        elif isinstance(contents, list):
+            for c in contents:
+                if not isinstance(c, dict):
+                    continue
+                ct = c.get("type", "")
+                if ct == "text":
+                    user_text = c.get("text", "")
+                    print(f"{GRAY}{ts()}{RESET}  {BLUE}USER: {truncate(user_text, 160)}{RESET}")
+                elif ct == "tool_result":
+                    is_err = c.get("is_error", False)
+                    content = str(c.get("content", ""))
+                    if is_err:
+                        print(f"{GRAY}{ts()}{RESET}  {RED}RESULT[ERR]: {truncate(content, 160)}{RESET}")
+                    else:
+                        lines = content.split("\n")
+                        summary = lines[0] if lines else ""
+                        if len(lines) > 1:
+                            summary += f" (+{len(lines)-1} lines)"
+                        print(f"{GRAY}{ts()}{RESET}  {DIM}RESULT[OK]: {truncate(summary, 160)}{RESET}")
+
+    elif t == "rate_limit_event":
+        info = obj.get("rate_limit_info", {})
+        status = info.get("status", "?")
+        rl_type = info.get("rateLimitType", "?")
+        if status != "allowed":
+            print(f"{GRAY}{ts()}{RESET}  {RED}RATE LIMIT: {status} ({rl_type}){RESET}")
+
+    sys.stdout.flush()
+PYEOF
+
+stop_follower() {
+    if [[ -n "${FOLLOWER_PID:-}" ]]; then
+        kill "$FOLLOWER_PID" 2>/dev/null || true
+        FOLLOWER_PID=""
+    fi
+}
+
+cleanup() {
+    trap - EXIT INT TERM   # prevent re-entrance
+    stop_follower
+    kill 0 2>/dev/null || true
+    exit 0
+}
+trap cleanup EXIT INT TERM
+
+get_latest() {
+    ls -t "$LOGS_DIR"/*.jsonl 2>/dev/null | head -1
+}
+
+echo "Watching $LOGS_DIR/ for log files..."
+
+while true; do
+    LATEST=$(get_latest)
+
+    if [[ -z "$LATEST" ]]; then
+        sleep "$POLL_INTERVAL"
+        continue
+    fi
+
+    if [[ "$LATEST" != "$CURRENT_FILE" ]]; then
+        stop_follower
+
+        if [[ -n "$CURRENT_FILE" ]]; then
+            echo ""
+            echo "═══ New iteration: $(basename "$LATEST") ═══"
+            echo ""
+        else
+            echo "Following: $(basename "$LATEST")"
+            echo "---"
+        fi
+
+        CURRENT_FILE="$LATEST"
+
+        tail -n +1 -f "$CURRENT_FILE" | python3 -u -c "$PYTHON_FORMATTER" &
+        FOLLOWER_PID=$!
+    fi
+
+    sleep "$POLL_INTERVAL"
+done

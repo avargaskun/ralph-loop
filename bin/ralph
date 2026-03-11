@@ -1,0 +1,186 @@
+#!/bin/bash
+# ralph — Phase-by-phase plan executor for Claude Code
+#
+# Usage: ralph <project> [max_iterations]
+# Examples:
+#   ralph my-feature          # Run until all phases complete
+#   ralph my-feature 10       # Run at most 10 iterations
+#
+# Project structure (relative to the repo you run this from):
+#   ralph/projects/<project>/design.md   — design specification
+#   ralph/projects/<project>/plan.md     — execution plan with phases
+#   ralph/projects/<project>/review.md   — post-execution review (created later)
+#   ralph/PROMPT.md                      — optional project-specific addendum
+#   ralph/logs/                          — auto-created; per-iteration JSONL logs
+#
+# Prerequisites:
+#   - Claude Code CLI installed and authenticated
+#   - Project directory exists with at least design.md and plan.md
+#
+# Safety:
+#   - Uses --dangerously-skip-permissions (autonomous operation)
+#   - Max iterations acts as a safety net
+#   - Ctrl+C to abort at any time
+
+set -euo pipefail
+
+# ── Arguments ─────────────────────────────────────────────────
+if [ $# -lt 1 ]; then
+    echo "Usage: ralph <project> [max_iterations]"
+    echo "  project:  Name of the project folder under ralph/projects/"
+    echo "  Example:  ralph my-feature"
+    exit 1
+fi
+
+PROJECT_NAME="$1"
+MAX_ITERATIONS=${2:-50}
+
+# ── Configuration ──────────────────────────────────────────────
+# RALPH_DIR: where ralph-loop is installed (~/.ralph/)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+RALPH_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# REPO_DIR: the project repo where ralph is being run (current working directory)
+REPO_DIR="$(pwd)"
+
+BUNDLED_PROMPT="$RALPH_DIR/PROMPT.md"
+LOCAL_ADDENDUM="$REPO_DIR/ralph/PROMPT.md"
+PROJECT_DIR="$REPO_DIR/ralph/projects/$PROJECT_NAME"
+DESIGN_FILE="$PROJECT_DIR/design.md"
+PLAN_FILE="$PROJECT_DIR/plan.md"
+LOG_DIR="$REPO_DIR/ralph/logs"
+SLEEP_BETWEEN=5  # seconds between iterations
+
+# Paths relative to repo root (passed to the agent in the prompt)
+REL_DESIGN="ralph/projects/$PROJECT_NAME/design.md"
+REL_PLAN="ralph/projects/$PROJECT_NAME/plan.md"
+
+# Exit signals the agent will use
+SIGNAL_PHASE_DONE="RALPH_PHASE_COMPLETE"
+SIGNAL_ALL_DONE="RALPH_ALL_COMPLETE"
+
+# ── Preflight checks ──────────────────────────────────────────
+if [ ! -f "$BUNDLED_PROMPT" ]; then
+    echo "Error: Bundled prompt not found at $BUNDLED_PROMPT"
+    echo "Is ralph-loop installed correctly at ~/.ralph/?"
+    exit 1
+fi
+
+if [ ! -d "$PROJECT_DIR" ]; then
+    echo "Error: Project directory not found at $PROJECT_DIR"
+    echo "Create it with design.md and plan.md first, or use /ralph-plan to generate them."
+    exit 1
+fi
+
+if [ ! -f "$PLAN_FILE" ]; then
+    echo "Error: Plan file not found at $PLAN_FILE"
+    echo "Create your plan first (use /ralph-plan), then re-run."
+    exit 1
+fi
+
+if [ ! -f "$DESIGN_FILE" ]; then
+    echo "Error: Design file not found at $DESIGN_FILE"
+    echo "Create your design first (use /ralph-design), then re-run."
+    exit 1
+fi
+
+if ! command -v claude &> /dev/null; then
+    echo "Error: 'claude' CLI not found. Install Claude Code first."
+    exit 1
+fi
+
+# ── Setup ──────────────────────────────────────────────────────
+CURRENT_BRANCH=$(git -C "$REPO_DIR" branch --show-current 2>/dev/null || echo "(unknown)")
+
+mkdir -p "$LOG_DIR"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Build the prompt: substitute placeholders in the bundled generic prompt
+PROMPT=$(sed \
+    -e "s|{{DESIGN_FILE}}|$REL_DESIGN|g" \
+    -e "s|{{PLAN_FILE}}|$REL_PLAN|g" \
+    "$BUNDLED_PROMPT")
+
+# Append project-local addendum if present
+if [ -f "$LOCAL_ADDENDUM" ]; then
+    PROMPT="$PROMPT
+
+---
+
+## Project-Specific Instructions
+
+$(cat "$LOCAL_ADDENDUM")"
+    echo "  (Using project-local addendum: ralph/PROMPT.md)"
+fi
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Ralph — Phase-by-Phase Executor"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Project:  $PROJECT_NAME"
+echo "  Design:   $REL_DESIGN"
+echo "  Plan:     $REL_PLAN"
+echo "  Branch:   $CURRENT_BRANCH"
+echo "  Max:      $MAX_ITERATIONS iterations"
+echo "  Logs:     ralph/logs/"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# ── Main loop ──────────────────────────────────────────────────
+ITERATION=0
+
+while [ $ITERATION -lt $MAX_ITERATIONS ]; do
+    ITERATION=$((ITERATION + 1))
+    LOG_FILE="$LOG_DIR/${PROJECT_NAME}_${TIMESTAMP}_iteration_${ITERATION}.jsonl"
+
+    echo "┌──────────────────────────────────────────────"
+    echo "│ Iteration $ITERATION / $MAX_ITERATIONS"
+    echo "│ $(date '+%Y-%m-%d %H:%M:%S')"
+    echo "└──────────────────────────────────────────────"
+
+    # Run Claude Code with the composed prompt
+    # -p: headless/non-interactive mode
+    # --dangerously-skip-permissions: autonomous operation
+    # --model: use opus for complex multi-step reasoning
+    # --output-format stream-json: stream all events as JSONL
+    # --verbose: include tool results and system events
+    OUTPUT=$(echo "$PROMPT" | claude -p \
+        --dangerously-skip-permissions \
+        --model claude-opus-4-6 \
+        --output-format stream-json \
+        --verbose \
+        2>&1 | tee "$LOG_FILE")
+
+    # Check for all-done signal (stop the loop)
+    if echo "$OUTPUT" | grep -q "$SIGNAL_ALL_DONE"; then
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "  All phases complete! Finished after $ITERATION iterations."
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        exit 0
+    fi
+
+    # Check for phase-done signal (continue to next iteration)
+    if echo "$OUTPUT" | grep -q "$SIGNAL_PHASE_DONE"; then
+        echo ""
+        echo "  Phase complete. Moving to next phase..."
+        echo ""
+    else
+        # Neither signal found — something unexpected happened
+        echo ""
+        echo "  WARNING: No completion signal detected in output."
+        echo "  Check log: $LOG_FILE"
+        echo "  Continuing to next iteration..."
+        echo ""
+    fi
+
+    # Brief pause between iterations
+    sleep $SLEEP_BETWEEN
+done
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Reached max iterations ($MAX_ITERATIONS). Stopping."
+echo "  Re-run to continue from where it left off."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+exit 0
