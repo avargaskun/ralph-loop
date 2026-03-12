@@ -24,10 +24,33 @@
 
 set -euo pipefail
 
+# ── Resolve RALPH_DIR early (needed by subcommands) ───────────
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+RALPH_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# ── Subcommands ───────────────────────────────────────────────
+if [ "${1:-}" = "update" ]; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  Updating ralph-loop"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "→ Pulling latest changes..."
+    git -C "$RALPH_DIR" pull
+    echo ""
+    echo "→ Re-running install steps..."
+    "$RALPH_DIR/install.sh"
+    exit $?
+fi
+
 # ── Arguments ─────────────────────────────────────────────────
 if [ $# -lt 1 ]; then
     echo "Usage: ralph <project> [max_iterations]"
+    echo "       ralph update"
+    echo ""
     echo "  project:  Name of the project folder under ralph/projects/"
+    echo "  update:   Pull latest changes and re-run install"
+    echo ""
     echo "  Example:  ralph my-feature"
     exit 1
 fi
@@ -37,8 +60,6 @@ MAX_ITERATIONS=${2:-50}
 
 # ── Configuration ──────────────────────────────────────────────
 # RALPH_DIR: where ralph-loop is installed (~/.ralph/)
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-RALPH_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # REPO_DIR: the project repo where ralph is being run (current working directory)
 REPO_DIR="$(pwd)"
