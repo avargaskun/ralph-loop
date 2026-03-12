@@ -24,7 +24,7 @@ Create these directories if they do not exist. Do NOT error out or stop — just
 
 Before writing the plan, read:
 
-1. `ralph/projects/<project-name>/design.md` — the source of truth for architecture, trade-offs, and resolved decisions. If this file doesn't exist, inform the user and suggest running `/ralph-design` first.
+1. `ralph/projects/<project-name>/design.md` — the source of truth for architecture, trade-offs, and resolved decisions. If this file doesn't exist, ask the user to describe what they want to plan for. Use their description as the basis for the plan, and document key technical choices in the "Design Decisions" section of the plan.
 2. Any relevant `CLAUDE.md` files in the repository — for project conventions, build commands, and coding standards.
 
 ## Your task
