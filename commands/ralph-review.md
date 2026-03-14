@@ -2,9 +2,11 @@ ultrathink
 
 You are going to review a completed Ralph plan execution. This is the quality gate between autonomous execution and merging — you read the design, the plan with its agent observations, all changed files, and the git diffs, then produce a verdict with findings.
 
-## Project name
+## Project name and input
 
-The project name is: **$ARGUMENTS**
+Parse `$ARGUMENTS` as follows:
+- The **first word** is the project name (the folder name under `ralph/projects/`).
+- Everything **after the first word** is additional context provided by the user — treat it as supplementary input for the review (e.g., areas of concern, specific things to focus on, or context about the changes).
 
 If `$ARGUMENTS` is empty, ask the user: "What is the project name? (The folder name under `ralph/projects/`)"
 

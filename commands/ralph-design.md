@@ -2,13 +2,13 @@ ultrathink
 
 You are going to create a design specification for a Ralph project. This is a structured document that captures the *what* and *why* of a feature — architecture, trade-offs, and resolved questions — written for a code agent that will execute it one phase at a time with no memory between iterations.
 
-## Project name
+## Project name and input
 
-The project name is: **$ARGUMENTS**
+Parse `$ARGUMENTS` as follows:
+- The **first word** is the project name (the folder name under `ralph/projects/`, lowercase, hyphenated). Example: "partitioned-history-db".
+- Everything **after the first word** is additional context provided by the user — treat it as the user's description of what they want designed. Use this text to inform the design document and to reduce the number of clarifying questions you need to ask.
 
 If `$ARGUMENTS` is empty, ask the user: "What is the project name? (This will be the folder name under `ralph/projects/`)"
-
-Use the project name as the folder name (lowercase, hyphenated). Example: "partitioned-history-db".
 
 ## Bootstrap
 

@@ -2,9 +2,11 @@ ultrathink
 
 You are going to address findings from a completed Ralph code review. For each finding, you implement the fix, verify it, and record the resolution in the review document. This is the step between reviewing and merging.
 
-## Project name
+## Project name and input
 
-The project name is: **$ARGUMENTS**
+Parse `$ARGUMENTS` as follows:
+- The **first word** is the project name (the folder name under `ralph/projects/`).
+- Everything **after the first word** is additional context provided by the user — treat it as supplementary input (e.g., which findings to prioritize, or additional context about the fixes).
 
 If `$ARGUMENTS` is empty, ask the user: "What is the project name? (The folder name under `ralph/projects/`)"
 

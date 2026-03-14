@@ -2,9 +2,11 @@ ultrathink
 
 You are going to create a phased execution plan for a Ralph project. The plan captures the *how* — step-by-step phases with checkboxes, code sketches, and test tasks — designed to be executed by the `ralph` loop one phase at a time.
 
-## Project name
+## Project name and input
 
-The project name is: **$ARGUMENTS**
+Parse `$ARGUMENTS` as follows:
+- The **first word** is the project name (the folder name under `ralph/projects/`).
+- Everything **after the first word** is additional context provided by the user — treat it as supplementary input for the plan (e.g., scope constraints, priorities, or details not in the design document).
 
 If `$ARGUMENTS` is empty, ask the user: "What is the project name? (The folder name under `ralph/projects/`)"
 
