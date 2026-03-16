@@ -99,10 +99,9 @@ if [ ! -f "$PLAN_FILE" ]; then
     exit 1
 fi
 
-if [ ! -f "$DESIGN_FILE" ]; then
-    echo "Error: Design file not found at $DESIGN_FILE"
-    echo "Create your design first (use /ralph-design), then re-run."
-    exit 1
+HAS_DESIGN=false
+if [ -f "$DESIGN_FILE" ]; then
+    HAS_DESIGN=true
 fi
 
 if ! command -v claude &> /dev/null; then
@@ -117,10 +116,19 @@ mkdir -p "$LOG_DIR"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # Build the prompt: substitute placeholders in the bundled generic prompt
-PROMPT=$(sed \
-    -e "s|{{DESIGN_FILE}}|$REL_DESIGN|g" \
-    -e "s|{{PLAN_FILE}}|$REL_PLAN|g" \
-    "$BUNDLED_PROMPT")
+if [ "$HAS_DESIGN" = true ]; then
+    PROMPT=$(sed \
+        -e "s|{{DESIGN_FILE}}|$REL_DESIGN|g" \
+        -e "s|{{PLAN_FILE}}|$REL_PLAN|g" \
+        -e "s|{{HAS_DESIGN}}|true|g" \
+        "$BUNDLED_PROMPT")
+else
+    PROMPT=$(sed \
+        -e "s|{{DESIGN_FILE}}|(no design document)|g" \
+        -e "s|{{PLAN_FILE}}|$REL_PLAN|g" \
+        -e "s|{{HAS_DESIGN}}|false|g" \
+        "$BUNDLED_PROMPT")
+fi
 
 # Append project-local addendum if present
 if [ -f "$LOCAL_ADDENDUM" ]; then
@@ -139,7 +147,11 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  Ralph — Phase-by-Phase Executor"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Project:  $PROJECT_NAME"
-echo "  Design:   $REL_DESIGN"
+if [ "$HAS_DESIGN" = true ]; then
+    echo "  Design:   $REL_DESIGN"
+else
+    echo "  Design:   (none)"
+fi
 echo "  Plan:     $REL_PLAN"
 echo "  Branch:   $CURRENT_BRANCH"
 echo "  Max:      $MAX_ITERATIONS iterations"

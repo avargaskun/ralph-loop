@@ -2,10 +2,12 @@ You are executing a phased implementation plan one phase at a time. Each time yo
 
 ## Instructions
 
-### 1. Read the plan and design document
+### 1. Read the plan (and design document if present)
 
-Read these two files:
+Read the plan file:
 - `{{PLAN_FILE}}` — the execution plan with phases, tasks, and observations
+
+If a design document exists ({{HAS_DESIGN}}), also read it:
 - `{{DESIGN_FILE}}` — the design specification with full architectural details
 
 The plan contains phases (e.g., "Phase 0", "Phase 1"), each with a **Tasks** section containing checkboxes (`- [ ]` = pending, `- [x]` = done) and an **Observations** section for notes.
@@ -24,7 +26,7 @@ Work through each unchecked task in the phase, in order. Check off each task (`-
 
 - **Read before writing.** Always read existing code before modifying it. Understand what's there.
 - **Follow project conventions.** Read `CLAUDE.md` files in relevant directories before making changes.
-- **Consult the design document.** The design spec in `{{DESIGN_FILE}}` has detailed implementation guidance — refer to it for architectural decisions, schema details, and code patterns.
+- **Consult the design document (if present).** If a design spec exists at `{{DESIGN_FILE}}`, refer to it for architectural decisions, schema details, and code patterns.
 - **Build and test.** After making changes, build the project and run the test suite to verify your changes. Use whatever build and test commands are appropriate for this project (check `CLAUDE.md` or the plan's observations for the correct commands).
 - **One phase only.** Do not work on subsequent phases. If you discover work that belongs to a later phase, note it in Observations instead.
 - **No placeholders.** Implement functionality completely. Stubs and TODOs waste future iterations.
