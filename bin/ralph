@@ -178,6 +178,7 @@ while [ $ITERATION -lt $MAX_ITERATIONS ]; do
     # --output-format stream-json: stream all events as JSONL
     # --verbose: include tool results and system events
     OUTPUT=$(echo "$PROMPT" | claude -p \
+        --no-session-persistence \
         --dangerously-skip-permissions \
         --model claude-opus-4-6 \
         --output-format stream-json \
