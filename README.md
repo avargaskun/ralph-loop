@@ -19,12 +19,13 @@ Ralph projects follow a four-phase lifecycle: **Design → Plan → Execute → 
 ```
 /ralph-design my-feature    # 1. Create design.md interactively
 /ralph-plan my-feature      # 2. Create plan.md from the design
-ralph my-feature            # 3. Execute the plan autonomously
+ralph my-feature            # 3. Execute the plan autonomously (shell-based)
+/ralph-loop my-feature      # 3. OR execute in-session (for SSO/PortKey users)
 /ralph-review my-feature    # 4. Review the implementation
 /ralph-address my-feature   # 5. Fix review findings
 ```
 
-All four slash commands are available in any Claude Code conversation after installation. Each one bootstraps the `ralph/projects/` folder if it doesn't exist yet.
+All five slash commands are available in any Claude Code conversation after installation. Each one bootstraps the `ralph/projects/` folder if it doesn't exist yet.
 
 ### 1. Design — `/ralph-design [project-name]`
 
@@ -34,9 +35,13 @@ Guides Claude to create `ralph/projects/<name>/design.md`: a structured specific
 
 Reads the design document and guides Claude to create `ralph/projects/<name>/plan.md`: a phased execution plan with checkboxes, code sketches, and build/test gates. Each phase is sized to fit in a single Claude Code context window (one phase = one commit).
 
-### 3. Execute — `ralph <project-name>`
+### 3. Execute — `ralph <project-name>` or `/ralph-loop [project-name]`
 
-Runs the autonomous loop. Each iteration:
+Two ways to run the autonomous loop:
+
+#### Shell-based execution: `ralph <project-name>`
+
+Recommended for most users. Runs the loop as a shell script. Each iteration:
 
 1. Substitutes project paths into the bundled prompt template
 2. Pipes the composed prompt to `claude -p` headlessly
@@ -50,6 +55,19 @@ If interrupted, re-run the same command — the loop picks up at the next unchec
 ralph my-feature            # Run until all phases complete (max 50 iterations)
 ralph my-feature 10         # Run at most 10 iterations
 ```
+
+#### In-session execution: `/ralph-loop [project-name] [max-iterations]`
+
+For users who cannot run the shell-based `ralph` command (e.g., SSO-authenticated Claude Code, API keys through PortKey). Spawns sequential subagents within your current Claude session following the same `PROMPT.md` instructions.
+
+Each subagent executes exactly one phase, then stops. The main agent detects the `RALPH_PHASE_COMPLETE` or `RALPH_ALL_COMPLETE` signal and continues or exits accordingly.
+
+```
+/ralph-loop my-feature      # Run until all phases complete (max 50 iterations)
+/ralph-loop my-feature 10   # Run at most 10 iterations
+```
+
+**Note:** In-session execution is slower and consumes your current conversation context. Use the shell-based `ralph` command when possible.
 
 ### 4. Review — `/ralph-review [project-name]`
 
@@ -120,6 +138,7 @@ Renders the JSONL stream as colored human-readable output: thinking blocks (gray
 └── commands/               # Claude Code skill files
     ├── ralph-design.md
     ├── ralph-plan.md
+    ├── ralph-loop.md
     ├── ralph-review.md
     └── ralph-address.md
 ```
