@@ -42,8 +42,8 @@ Execute the Ralph loop workflow by spawning sequential subagents. Each subagent 
 
 ### Step 1: Read the prompt template
 
-Read the bundled prompt template from your repository. The template is at:
-- **Repo root relative path:** `PROMPT.md`
+Read the bundled prompt template. The template is at:
+- **Path:** `~/.ralph/PROMPT.md`
 
 This template contains placeholders that you'll substitute:
 - `{{PLAN_FILE}}` → `ralph/projects/<project-name>/plan.md`
