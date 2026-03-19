@@ -124,13 +124,25 @@ Each phase follows this template:
 |------|--------|---------|
 ```
 
+### 7. Open Questions (optional)
+
+If — and only if — there are genuine ambiguities, missing information, or decisions that could materially affect the plan's success, list them at the end. Do NOT include questions for the sake of completeness or to appear thorough. No questions is the expected default for a well-scoped plan with a clear design document.
+
+```markdown
+---
+
+## Open Questions
+
+- <Genuine question that blocks or risks a phase>
+```
+
 ---
 
 ## Phase Design Guidelines
 
-- **One phase = one loop iteration.** Each phase must fit within a single Claude Code context window. Err on the side of smaller phases.
+- **One phase = one loop iteration.** Each phase must be granular enough that an agent can complete it well within a single context window, without the system resorting to conversation compression. Context compression degrades performance and causes hallucinations — if a phase is large enough to trigger it, the phase is too large. Err on the side of smaller phases.
 - **Build + test gate is the last task in every phase.** Never skip it.
-- **Tests belong in the same phase as the code they test.** Don't defer tests to a later phase.
+- **Tests belong in the same phase as the code they test.** If tests exist or are part of the plan, they must be written and executed as part of verifying each phase's implementation — not batched into a later "add tests" phase. This applies to both unit and integration tests. Deferring test authoring to later phases masks bugs early and compounds risk.
 - **Each phase should leave the codebase in a green state.** All existing tests continue to pass.
 - **Task numbering:** `<phase>.<task>` (e.g., 2.3 = Phase 2, Task 3).
 - **File paths in tasks:** Always include the file path so the agent doesn't have to search.
