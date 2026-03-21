@@ -93,7 +93,7 @@ Execute iterations sequentially using the Agent tool:
    - `description: "Execute phase N of ralph project <project-name>"`
    - `prompt: <the composed prompt from Step 2>`
    - `model: "opus"` (use Opus for complex multi-step reasoning)
-   - `run_in_background: false` (blocking — wait for completion)
+   - `run_in_background: true` (non-blocking — you will be notified on completion)
 
 2. **After the subagent completes**, examine its output for completion signals:
    - If output contains `RALPH_PHASE_COMPLETE`: The phase is done. Continue to the next iteration.
@@ -137,7 +137,8 @@ When the loop completes:
 
 ## Important Notes
 
-- **Sequential execution only.** Do NOT spawn subagents in parallel — they will conflict on file modifications.
+- **Sequential execution only.** Do NOT spawn subagents in parallel — they will conflict on file modifications. Wait for each background agent to complete before spawning the next.
+- **Remain responsive between iterations.** While a background agent is running, you can answer user questions, provide status updates, or discuss the project. When the agent completes, proceed with the next iteration.
 - **No session persistence across subagents.** Each subagent starts fresh with only the prompt and the plan/design files.
 - **The subagent is autonomous.** It will NOT ask questions (per PROMPT.md instructions). It must make decisions based on the plan and design.
 - **Completion signals are critical.** The loop depends on the agent outputting `RALPH_PHASE_COMPLETE` after each phase and `RALPH_ALL_COMPLETE` when all done.
