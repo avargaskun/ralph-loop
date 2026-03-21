@@ -7,11 +7,24 @@
 #
 # Usage:
 #   ralph-follow                  # watches ralph/logs/ under current directory
+#   ralph-follow <project>        # only logs for the named project
 #   ralph-follow /path/to/logs/   # explicit logs directory
+#   ralph-follow /path/to/logs/ <project>  # explicit dir + project filter
 
 set -euo pipefail
 
-LOGS_DIR="${1:-$(pwd)/ralph/logs}"
+# Parse arguments: distinguish paths from project names
+LOGS_DIR="$(pwd)/ralph/logs"
+PROJECT_PREFIX=""
+
+for arg in "$@"; do
+    if [[ "$arg" == */* || "$arg" == .* ]]; then
+        LOGS_DIR="$arg"
+    else
+        PROJECT_PREFIX="${arg}_"
+    fi
+done
+
 POLL_INTERVAL=2
 
 CURRENT_FILE=""
@@ -149,10 +162,14 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 get_latest() {
-    ls -t "$LOGS_DIR"/*.jsonl 2>/dev/null | head -1
+    ls -t "$LOGS_DIR"/${PROJECT_PREFIX}*.jsonl 2>/dev/null | head -1 || true
 }
 
-echo "Watching $LOGS_DIR/ for log files..."
+if [[ -n "$PROJECT_PREFIX" ]]; then
+    echo "Watching $LOGS_DIR/ for ${PROJECT_PREFIX}*.jsonl ..."
+else
+    echo "Watching $LOGS_DIR/ for log files..."
+fi
 
 while true; do
     LATEST=$(get_latest)
