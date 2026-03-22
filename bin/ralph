@@ -70,6 +70,7 @@ PROJECT_DIR="$REPO_DIR/ralph/projects/$PROJECT_NAME"
 DESIGN_FILE="$PROJECT_DIR/design.md"
 PLAN_FILE="$PROJECT_DIR/plan.md"
 LOG_DIR="$REPO_DIR/ralph/logs"
+STOP_FILE="$PROJECT_DIR/.stop"
 SLEEP_BETWEEN=5  # seconds between iterations
 
 # Paths relative to repo root (passed to the agent in the prompt)
@@ -108,6 +109,9 @@ if ! command -v claude &> /dev/null; then
     echo "Error: 'claude' CLI not found. Install Claude Code first."
     exit 1
 fi
+
+# ── Clean up stale stop file ───────────────────────────────────
+rm -f "$STOP_FILE"
 
 # ── Setup ──────────────────────────────────────────────────────
 CURRENT_BRANCH=$(git -C "$REPO_DIR" branch --show-current 2>/dev/null || echo "(unknown)")
@@ -164,6 +168,18 @@ ITERATION=0
 
 while [ $ITERATION -lt $MAX_ITERATIONS ]; do
     ITERATION=$((ITERATION + 1))
+
+    # Check for stop signal before starting next iteration
+    if [ -f "$STOP_FILE" ]; then
+        rm "$STOP_FILE"
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "  Stop file detected. Halting after $((ITERATION - 1)) iterations."
+        echo "  Re-run to continue from where it left off."
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        exit 0
+    fi
+
     LOG_FILE="$LOG_DIR/${PROJECT_NAME}_${TIMESTAMP}_iteration_${ITERATION}.jsonl"
 
     echo "┌──────────────────────────────────────────────"
