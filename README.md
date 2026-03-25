@@ -2,7 +2,7 @@
 
 A portable, installable agentic development framework for Claude Code. Ralph implements a phase-by-phase plan executor where Claude autonomously works through a structured plan one phase at a time, committing after each one.
 
-Install once to your home directory. The `ralph` CLI and four slash commands are then available in every project on your machine — no per-project file copying required.
+Install once to your home directory. The `ralph` CLI and six slash commands are then available in every project on your machine — no per-project file copying required.
 
 ## Installation
 
@@ -14,18 +14,19 @@ git clone https://github.com/avargaskun/ralph-loop ~/.ralph
 
 ## SDLC Workflow
 
-Ralph projects follow a four-phase lifecycle: **Design → Plan → Execute → Review → Address**.
+Ralph projects follow a six-phase lifecycle: **Design → Plan → Critique → Execute → Review → Address**.
 
 ```
 /ralph-design my-feature    # 1. Create design.md interactively
 /ralph-plan my-feature      # 2. Create plan.md from the design
-ralph my-feature            # 3. Execute the plan autonomously (shell-based)
-/ralph-loop my-feature      # 3. OR execute in-session (for SSO/PortKey users)
-/ralph-review my-feature    # 4. Review the implementation
-/ralph-address my-feature   # 5. Fix review findings
+/ralph-critique my-feature  # 3. Pre-execution critique of design/plan
+ralph my-feature            # 4. Execute the plan autonomously (shell-based)
+/ralph-loop my-feature      # 4. OR execute in-session (for SSO/PortKey users)
+/ralph-review my-feature    # 5. Review the implementation
+/ralph-address my-feature   # 6. Fix review findings
 ```
 
-All five slash commands are available in any Claude Code conversation after installation. Each one bootstraps the `ralph/projects/` folder if it doesn't exist yet.
+All six slash commands are available in any Claude Code conversation after installation. Each one bootstraps the `ralph/projects/` folder if it doesn't exist yet.
 
 ### 1. Design — `/ralph-design [project-name]`
 
@@ -35,7 +36,13 @@ Guides Claude to create `ralph/projects/<name>/design.md`: a structured specific
 
 Reads the design document and guides Claude to create `ralph/projects/<name>/plan.md`: a phased execution plan with checkboxes, code sketches, and build/test gates. Each phase is sized to fit in a single Claude Code context window (one phase = one commit).
 
-### 3. Execute — `ralph <project-name>` or `/ralph-loop [project-name]`
+### 3. Critique — `/ralph-critique [project-name]`
+
+Guides Claude to critically review the design and/or plan *before execution begins*. If `plan.md` exists, it reviews the plan (and any linked design). Otherwise, it reviews `design.md` alone. Claude analyzes the actual codebase to verify assumptions, checks logic and math, surfaces ambiguity, and produces `ralph/projects/<name>/critique.md` with findings categorized as Critical / Important / Suggestions.
+
+The critique is a report — after reading it, you iterate on the design/plan through normal conversation before starting execution.
+
+### 4. Execute — `ralph <project-name>` or `/ralph-loop [project-name]`
 
 Two ways to run the autonomous loop:
 
@@ -69,11 +76,11 @@ Each subagent executes exactly one phase, then stops. The main agent detects the
 
 **Note:** In-session execution is slower and consumes your current conversation context. Use the shell-based `ralph` command when possible.
 
-### 4. Review — `/ralph-review [project-name]`
+### 5. Review — `/ralph-review [project-name]`
 
 After all phases complete, guides Claude to produce `ralph/projects/<name>/review.md`: a full code review reading the design, plan observations, all changed files, and git diffs. Findings are categorized as Critical / Important / Trivial with a design compliance checklist and test coverage assessment.
 
-### 5. Address — `/ralph-address [project-name]`
+### 6. Address — `/ralph-address [project-name]`
 
 Guides Claude to fix findings from `review.md` sequentially — one finding at a time using sub-agents to preserve context. Each fix is followed by a build verification and a `> **Resolution:**` blockquote appended to the finding in the review document.
 
@@ -91,6 +98,7 @@ After installation, projects using ralph-loop only need:
     │   └── <project-name>/
     │       ├── design.md   # Created by /ralph-design
     │       ├── plan.md     # Created by /ralph-plan
+    │       ├── critique.md # Created by /ralph-critique
     │       └── review.md   # Created by /ralph-review
     └── logs/               # Auto-created; gitignore this
 ```
@@ -138,6 +146,7 @@ Renders the JSONL stream as colored human-readable output: thinking blocks (gray
 └── commands/               # Claude Code skill files
     ├── ralph-design.md
     ├── ralph-plan.md
+    ├── ralph-critique.md
     ├── ralph-loop.md
     ├── ralph-review.md
     └── ralph-address.md

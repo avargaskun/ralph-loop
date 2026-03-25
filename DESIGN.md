@@ -7,7 +7,7 @@
 
 `ralph-loop` is a portable, shareable agentic development framework for Claude Code. It implements the "Ralph" playbook: a phase-by-phase plan executor where Claude autonomously works through a structured plan one phase at a time, committing after each one.
 
-The project ships as a GitHub repository that users install once to their home directory. After installation, the loop CLI and four interactive guide skills are available in every project on their machine — no per-project file copying required.
+The project ships as a GitHub repository that users install once to their home directory. After installation, the loop CLI and six interactive guide skills are available in every project on their machine — no per-project file copying required.
 
 ---
 
@@ -28,7 +28,7 @@ Ralph-loop has two distinct functional layers that require different distributio
 
 ### Layer 1 — Interactive Guide Phases
 
-The Design, Plan, Review, and Address phases are human-in-the-loop activities: the developer invokes a Claude Code slash command, Claude produces an artifact (a design doc, a plan, a review), and the developer reads and refines it interactively.
+The Design, Plan, Critique, Review, and Address phases are human-in-the-loop activities: the developer invokes a Claude Code slash command, Claude produces an artifact (a design doc, a plan, a critique, a review), and the developer reads and refines it interactively.
 
 These phases map naturally to **Claude Code skills** — markdown prompt files stored in `~/.claude/commands/`. A skill is invoked with `/skill-name` in any Claude Code conversation and expands to the full prompt, with no per-project files needed.
 
@@ -37,6 +37,7 @@ These phases map naturally to **Claude Code skills** — markdown prompt files s
 |---|---|
 | `/ralph-design` | Guide Claude to produce a design specification |
 | `/ralph-plan` | Guide Claude to produce a phased execution plan |
+| `/ralph-critique` | Guide Claude to critically review design/plan before execution |
 | `/ralph-review` | Guide Claude to review completed implementation |
 | `/ralph-address` | Guide Claude to fix findings from a review |
 
@@ -110,6 +111,7 @@ cd ~/.ralph && git checkout v1.2.0
 └── commands/               # Claude Code skill files
     ├── ralph-design.md
     ├── ralph-plan.md
+    ├── ralph-critique.md
     ├── ralph-review.md
     └── ralph-address.md
 ```
@@ -128,6 +130,7 @@ After installation, projects using ralph-loop only need:
     │   └── <project-name>/
     │       ├── design.md   # Created during /ralph-design phase
     │       ├── plan.md     # Created during /ralph-plan phase
+    │       ├── critique.md # Created during /ralph-critique phase
     │       └── review.md   # Created during /ralph-review phase
     └── logs/               # Auto-created; gitignored
 ```
@@ -261,6 +264,10 @@ Instructs Claude to create `ralph/projects/<name>/design.md` following the Ralph
 ### `/ralph-plan` — Execution Plan Guide
 
 Instructs Claude to create `ralph/projects/<name>/plan.md` following the Ralph plan format: header with status/current-phase fields, phased tasks with checkboxes, Observations section per phase, and optional Design Decisions section for smaller features. Emphasizes phase granularity (one phase = one iteration = one commit), no placeholder tasks, and structuring phases so early ones establish scaffolding that later ones fill in.
+
+### `/ralph-critique` — Pre-Execution Critique Guide
+
+Instructs Claude to critically review the design and/or plan before execution begins. If `plan.md` exists, it reviews the plan and any linked design. Otherwise, it reviews `design.md` alone. Claude analyzes the actual codebase to verify assumptions, traces code paths being modified, checks logic and math with concrete examples, and surfaces ambiguity and gaps. Produces findings categorized as Critical / Important / Suggestions. The critique is a report — the developer reads it and iterates on the documents through normal conversation.
 
 ### `/ralph-review` — Post-Execution Review Guide
 
