@@ -38,7 +38,7 @@ Reads the design document and guides Claude to create `ralph/projects/<name>/pla
 
 ### 3. Critique — `/ralph-critique [project-name]`
 
-Guides Claude to critically review the design and/or plan *before execution begins*. If `plan.md` exists, it reviews the plan (and any linked design). Otherwise, it reviews `design.md` alone. Claude analyzes the actual codebase to verify assumptions, checks logic and math, surfaces ambiguity, and produces `ralph/projects/<name>/critique.md` with findings categorized as Critical / Important / Suggestions.
+Guides Claude to critically review the design and/or plan *before execution begins*. If `plan.md` exists, it reviews the plan (and any linked design). Otherwise, it reviews `design.md` alone. Claude analyzes the actual codebase to verify assumptions, checks logic and math, surfaces ambiguity, and produces findings categorized as Critical / Important / Suggestions. Output is `design-critique.md` when reviewing design only, or `plan-critique.md` when reviewing the plan.
 
 The critique is a report — after reading it, you iterate on the design/plan through normal conversation before starting execution.
 
@@ -98,7 +98,8 @@ After installation, projects using ralph-loop only need:
     │   └── <project-name>/
     │       ├── design.md   # Created by /ralph-design
     │       ├── plan.md     # Created by /ralph-plan
-    │       ├── critique.md # Created by /ralph-critique
+    │       ├── design-critique.md  # Created by /ralph-critique (design only)
+    │       ├── plan-critique.md    # Created by /ralph-critique (plan + design)
     │       └── review.md   # Created by /ralph-review
     └── logs/               # Auto-created; gitignore this
 ```

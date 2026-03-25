@@ -130,7 +130,8 @@ After installation, projects using ralph-loop only need:
     │   └── <project-name>/
     │       ├── design.md   # Created during /ralph-design phase
     │       ├── plan.md     # Created during /ralph-plan phase
-    │       ├── critique.md # Created during /ralph-critique phase
+    │       ├── design-critique.md  # Created by /ralph-critique (design only)
+    │       ├── plan-critique.md    # Created by /ralph-critique (plan + design)
     │       └── review.md   # Created during /ralph-review phase
     └── logs/               # Auto-created; gitignored
 ```
@@ -267,7 +268,7 @@ Instructs Claude to create `ralph/projects/<name>/plan.md` following the Ralph p
 
 ### `/ralph-critique` — Pre-Execution Critique Guide
 
-Instructs Claude to critically review the design and/or plan before execution begins. If `plan.md` exists, it reviews the plan and any linked design. Otherwise, it reviews `design.md` alone. Claude analyzes the actual codebase to verify assumptions, traces code paths being modified, checks logic and math with concrete examples, and surfaces ambiguity and gaps. Produces findings categorized as Critical / Important / Suggestions. The critique is a report — the developer reads it and iterates on the documents through normal conversation.
+Instructs Claude to critically review the design and/or plan before execution begins. If `plan.md` exists, it reviews the plan and any linked design, producing `plan-critique.md`. Otherwise, it reviews `design.md` alone, producing `design-critique.md`. Claude analyzes the actual codebase to verify assumptions, traces code paths being modified, checks logic and math with concrete examples, and surfaces ambiguity and gaps. Produces findings categorized as Critical / Important / Suggestions. The critique is a report — the developer reads it and iterates on the documents through normal conversation.
 
 ### `/ralph-review` — Post-Execution Review Guide
 

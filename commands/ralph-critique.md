@@ -24,14 +24,14 @@ Create these directories if they do not exist. Do NOT error out or stop — just
 
 ## What to review
 
-Determine the review scope:
+Determine the review scope and output file:
 
-1. If `ralph/projects/<project-name>/plan.md` exists, review it. If the plan references a `design.md`, review that too.
-2. If there is no `plan.md`, review `ralph/projects/<project-name>/design.md`. If it doesn't exist either, ask the user what to review.
+1. If `ralph/projects/<project-name>/plan.md` exists, review it. If the plan references a `design.md`, review that too. Output file: **`plan-critique.md`**.
+2. If there is no `plan.md`, review `ralph/projects/<project-name>/design.md`. If it doesn't exist either, ask the user what to review. Output file: **`design-critique.md`**.
 
 ## Your task
 
-Produce `ralph/projects/<project-name>/critique.md` by following the methodology below in order. Do not skip steps.
+Produce the output file (either `ralph/projects/<project-name>/plan-critique.md` or `ralph/projects/<project-name>/design-critique.md`) by following the methodology below in order. Do not skip steps.
 
 ---
 
@@ -73,7 +73,7 @@ Beyond the design-level concerns, check the plan's structure:
 
 ## Critique Document Structure
 
-Write `ralph/projects/<project-name>/critique.md` with this structure:
+Write the output file with this structure:
 
 ```markdown
 # <Project Title> — Pre-Execution Critique
@@ -139,7 +139,7 @@ After creating the critique file, print:
 
 ```
 Files created/modified:
-- ralph/projects/<project-name>/critique.md
+- ralph/projects/<project-name>/<design-critique.md or plan-critique.md>
 ```
 
 Then summarize the finding counts by severity and highlight the most important one.
