@@ -67,8 +67,12 @@ This plan is designed for the Ralph loop. Each phase:
 **After each loop iteration:** update the "Current phase" field at the top and record observations.
 
 **Build + test gate (mandatory at the end of every phase):**
-```<build-command> && <test-command>```
-A phase is **not complete** until both commands succeed and **all** tests pass (including pre-existing tests). Fix failures before marking the phase done.
+
+*Baseline (every phase):* ```<build-command> && <unit-test-command>```
+
+Phases that add or modify integration/E2E tests must also run them. Include any prerequisites (deployment, environment setup) as tasks before the gate, and add the integration test run command to the gate itself. The gate command may differ between phases — it must cover all tests that validate the phase's work.
+
+A phase is **not complete** until the gate succeeds and **all** tests written or modified in that phase have been executed. Fix failures before marking the phase done.
 ```
 
 If you cannot determine the build/test commands from `CLAUDE.md` or context, ask the user before writing the plan.
@@ -142,12 +146,17 @@ If — and only if — there are genuine ambiguities, missing information, or de
 
 - **One phase = one loop iteration.** Each phase must be granular enough that an agent can complete it well within a single context window, without the system resorting to conversation compression. Context compression degrades performance and causes hallucinations — if a phase is large enough to trigger it, the phase is too large. Err on the side of smaller phases.
 - **Build + test gate is the last task in every phase.** Never skip it.
-- **Tests belong in the same phase as the code they test.** If tests exist or are part of the plan, they must be written and executed as part of verifying each phase's implementation — not batched into a later "add tests" phase. This applies to both unit and integration tests. Deferring test authoring to later phases masks bugs early and compounds risk.
+- **Tests belong in the same phase as the code they test.** For each phase that introduces new behavior, actively consider both test types:
+  - **Unit tests** are always expected for new logic.
+  - **Integration/E2E tests** should be included in the same phase whenever the behavior is exercisable end-to-end at that point. If integration tests require deployment or environment setup, include those as tasks in the phase.
+  - If integration tests for a phase's behavior **cannot** be written yet (e.g., the phase is pure scaffolding with no observable external behavior, or a required layer like the UI isn't built yet), note this explicitly in the phase description and state **which later phase** will add the integration test coverage for this behavior. This creates a traceable obligation rather than a silent omission.
+  - Batching all integration tests into a dedicated final phase is the same anti-pattern as batching all unit tests — it delays validation and concentrates debugging risk.
 - **Each phase should leave the codebase in a green state.** All existing tests continue to pass.
 - **Task numbering:** `<phase>.<task>` (e.g., 2.3 = Phase 2, Task 3).
 - **File paths in tasks:** Always include the file path so the agent doesn't have to search.
 - **Code sketches in tasks:** Include implementation sketches for non-obvious logic.
 - **Early phases establish scaffolding** that later phases fill in. Don't try to implement everything in Phase 0.
+- **Integration test phases need context room for troubleshooting.** Integration tests interact with deployed systems and have more failure modes than unit tests (network, timing, environment, deployment state). When a phase includes integration tests, keep the implementation work in that phase small enough that the agent has context room to investigate and fix test failures. If a phase has both substantial implementation work and integration tests, consider splitting it: implementation + unit tests in one phase, then integration tests (with deployment) in the next.
 - **The final phase** should include a verification pass: code review, logging review, design compliance check, and a final build + test gate.
 
 ## What Makes a Good Phase Boundary
@@ -163,6 +172,7 @@ Split on these natural boundaries:
 - **Phase too large:** If a phase has more than ~10 tasks, it's probably too big. Split it.
 - **Missing test tasks:** Every phase that adds logic needs test tasks.
 - **Implicit dependencies:** If Phase 2 depends on a specific decision made in Phase 1, document it explicitly in Phase 2's task descriptions. The agent has no memory between iterations — only the plan file and observations carry context forward.
+- **Integration tests batched at the end:** If the plan has a phase titled "Integration Tests" that covers all integration testing for the entire feature, the tests are too far from the code they validate. Integration tests should appear in the phase where the behavior becomes end-to-end testable, not in a catch-all phase at the end. Exception: a project's first integration test may need infrastructure setup (test helpers, SSH utilities, deployment tasks) — this scaffolding can be a dedicated phase, but the tests themselves should be in the phase where the tested behavior is introduced.
 
 ---
 
