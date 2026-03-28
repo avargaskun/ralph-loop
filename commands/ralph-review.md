@@ -104,6 +104,8 @@ Write `ralph/projects/<project-name>/review.md` with this structure:
 
 ## Findings
 
+Number findings **sequentially across all severity sections** — do not restart numbering within each section. For example, if Critical has findings 1–3, Important starts at 4.
+
 ### Critical
 
 Findings that must be fixed before merging. Issues that could cause data loss,

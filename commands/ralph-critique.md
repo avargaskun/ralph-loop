@@ -107,6 +107,8 @@ Observations that could improve the design or plan but are not problems per se. 
 
 ### Finding format
 
+Number findings **sequentially across all severity sections** — do not restart numbering within each section. For example, if Critical has findings 1–3, Important starts at 4.
+
 Each finding should include:
 
 1. A clear title describing the issue.
