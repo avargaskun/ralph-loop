@@ -12,6 +12,8 @@ If a design document exists ({{HAS_DESIGN}}), also read it:
 
 The plan contains phases (e.g., "Phase 0", "Phase 1"), each with a **Tasks** section containing checkboxes (`- [ ]` = pending, `- [x]` = done) and an **Observations** section for notes.
 
+**Git staging rule (applies to ALL commits in this prompt):** Before staging files, run `git check-ignore -q <plan-file>` to test whether the plan file is git-ignored. If the command exits 0, do NOT stage the plan file — only stage the other changed files. Never use `git add --force` or `git add -f` on any file.
+
 ### 2. Read prior observations
 
 Each phase has an **Observations** section. Read ALL observations from completed phases — they contain discoveries, deviations, and context from prior iterations that you MUST account for.
@@ -66,8 +68,10 @@ After completing all tasks in the phase, write notes in that phase's **Observati
 
 - Update the **Status** and **Current phase** fields at the top of the plan file
 - Verify git is on a named branch (not detached HEAD) — if detached, STOP and do not commit
+- **Before staging**, check if the plan file is git-ignored by running `git check-ignore -q <plan-file>`. If the command exits 0 (file is ignored), do NOT stage the plan file — stage only the other changed files. If the file is not ignored, stage it along with everything else.
 - Stage and commit all changes with a descriptive message **prefixed with the phase number**, e.g.: `Phase 0: feat: Add on-demand retention cleanup`
 - Do NOT push to remote
+- Do NOT use `git add --force` or `git add -f` on any file — always let `.gitignore` rules take effect
 
 Then output the following signal on its own line:
 
