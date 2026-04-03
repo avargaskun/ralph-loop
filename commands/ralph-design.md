@@ -79,9 +79,40 @@ When the design modifies existing components, document:
 - **What stays the same** — explicitly noting unchanged behavior prevents the agent from accidentally refactoring working code.
 - **Migration path** if there's a transition from old to new behavior.
 
-### 6. Files Changed
+### 6. Test Plan
 
-Summary table of all files that will be created or modified:
+Before writing this section, inspect the project's existing test infrastructure:
+
+- **Test framework and runner** — what tool runs tests (e.g., pytest, jest, go test, cargo test)? Check config files, `package.json` scripts, `Makefile` targets, CI workflows, etc.
+- **Directory layout and naming** — where do test files live? What naming convention do they follow (e.g., `test_*.py`, `*.test.ts`, `*_test.go`)?
+- **Patterns and utilities** — are there shared fixtures, factories, helpers, or base classes? What mocking/stubbing approach does the project use?
+- **Coverage and CI** — are there coverage thresholds, linting rules, or CI gates that tests must satisfy?
+
+If the project has no test infrastructure yet, note that explicitly and recommend a minimal setup consistent with the project's language and tooling.
+
+Ground all test suggestions in what you find. Propose tests that follow the project's existing conventions — same framework, same directory structure, same patterns.
+
+Enumerate the tests required to validate this design. Group by type:
+
+- **Unit tests** — individual functions/methods in isolation.
+- **Integration tests** — interactions between components, database queries, API calls.
+
+Within each type, cover the following concerns as applicable:
+
+- **Happy path** — expected inputs produce correct outputs.
+- **Edge cases** — boundary conditions, error paths, malformed input, concurrency races.
+- **Backward compatibility** — when the design changes existing behavior, verify that unchanged contracts still hold.
+
+For each test, state:
+- The file where it belongs (new or existing test file).
+- What it asserts, in one sentence.
+- Any fixtures, mocks, or setup it requires.
+
+Omit types or concerns that don't apply to the design.
+
+### 7. Files Changed
+
+Summary table of all files that will be created or modified (including test files from the Test Plan above):
 
 ```markdown
 ## Files Changed
@@ -92,7 +123,7 @@ Summary table of all files that will be created or modified:
 | `src/path/to/NewClass.ext` | **New file.** Description of purpose |
 ```
 
-### 7. Open Questions
+### 8. Open Questions
 
 After the first draft, list questions and concerns that need the user's input before the design is finalized:
 
