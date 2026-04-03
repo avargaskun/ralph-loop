@@ -22,6 +22,16 @@ ralph/
 
 Create these directories if they do not exist. Do NOT error out or stop — just create them silently and continue.
 
+## Prior exploration
+
+Check if `ralph/projects/<project-name>/explore.md` exists. If it does, read it in full before writing anything. The exploration document contains codebase context, a strawman proposal, alternatives analysis, resolved and open questions, risks, and scope boundaries from an earlier brainstorming session. Use it to:
+
+- **Start from the strawman.** Use it as the basis for the design rather than starting from scratch. The user has already reacted to it and refined it.
+- **Incorporate resolved questions.** Decisions made during exploration should flow into the design as settled choices, not be re-opened as open questions.
+- **Carry forward risks and scope boundaries.** The risk assessment and scope sketch should inform the design's edge case handling and "what stays the same" sections.
+
+The exploration is input, not a substitute for your own analysis. The codebase may have changed since the exploration was written — verify claims about existing code rather than trusting them blindly. Do your own investigation of the code paths you'll be designing against; use the exploration's codebase context as a starting point, not a final answer.
+
 ## Your task
 
 Create `ralph/projects/<project-name>/design.md` following the structure below. Engage with the user interactively: ask clarifying questions, surface trade-offs, and refine the document based on their responses. The design is ready when all Open Questions are marked `_Resolved_`.

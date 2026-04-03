@@ -7,7 +7,7 @@
 
 `ralph-loop` is a portable, shareable agentic development framework for Claude Code. It implements the "Ralph" playbook: a phase-by-phase plan executor where Claude autonomously works through a structured plan one phase at a time, committing after each one.
 
-The project ships as a GitHub repository that users install once to their home directory. After installation, the loop CLI and six interactive guide skills are available in every project on their machine — no per-project file copying required.
+The project ships as a GitHub repository that users install once to their home directory. After installation, the loop CLI and seven interactive guide skills are available in every project on their machine — no per-project file copying required.
 
 ---
 
@@ -35,6 +35,7 @@ These phases map naturally to **Claude Code skills** — markdown prompt files s
 **Skills:**
 | Command | Purpose |
 |---|---|
+| `/ralph-explore` | Guide Claude to explore an idea and produce a briefing for design |
 | `/ralph-design` | Guide Claude to produce a design specification |
 | `/ralph-plan` | Guide Claude to produce a phased execution plan |
 | `/ralph-critique` | Guide Claude to critically review design/plan before execution |
@@ -109,6 +110,7 @@ cd ~/.ralph && git checkout v1.2.0
 │   ├── ralph               # Loop script (loop.sh)
 │   └── ralph-follow        # Log follower/formatter
 └── commands/               # Claude Code skill files
+    ├── ralph-explore.md
     ├── ralph-design.md
     ├── ralph-plan.md
     ├── ralph-critique.md
@@ -128,6 +130,7 @@ After installation, projects using ralph-loop only need:
     ├── PROMPT.md           # OPTIONAL: project-specific addendum (see below)
     ├── projects/
     │   └── <project-name>/
+    │       ├── explore.md  # Created during /ralph-explore phase (optional)
     │       ├── design.md   # Created during /ralph-design phase
     │       ├── plan.md     # Created during /ralph-plan phase
     │       ├── design-critique.md  # Created by /ralph-critique (design only)
@@ -257,6 +260,10 @@ The loop detects these by scanning the full combined stdout+stderr of each `clau
 Each skill file is a self-contained guide that tells Claude how to produce the corresponding artifact. The skill embeds all necessary instructions inline — no `@file` references to external guide documents.
 
 This is a deliberate trade-off: skills are slightly harder to read in raw form but require no per-project files. Users who want to customize a guide can edit the skill file directly in `~/.ralph/commands/` (though this will be overwritten on `git pull` — a known limitation).
+
+### `/ralph-explore` — Idea Exploration Guide
+
+Instructs Claude to explore an idea through deep codebase analysis before any design decisions are committed. Claude investigates relevant code paths, adjacent features, patterns, documentation, and constraints, then produces `ralph/projects/<name>/explore.md` — a lightweight briefing containing: restated idea, codebase context discovered, an opinionated strawman proposal, alternatives with pros/cons, open questions grouped by impact, risks and show-stoppers, and a scope sketch with complexity signal. The exploration is interactive: after the initial briefing, Claude engages the user to resolve questions, refine the strawman, and draw scope boundaries. The output feeds directly into `/ralph-design`.
 
 ### `/ralph-design` — Design Specification Guide
 
