@@ -7,7 +7,7 @@
 #
 # What this does:
 #   1. Makes CLI scripts executable
-#   2. Creates ~/.claude/commands/ralph-*.md symlinks pointing to this repo
+#   2. Installs skill files into ~/.claude/commands/ (symlinks if supported, copies otherwise)
 #   3. Appends ~/.ralph/bin to PATH in your shell RC file (once, guarded)
 
 set -euo pipefail
@@ -30,25 +30,65 @@ chmod +x "$BIN_DIR/ralph-follow"
 echo "  $BIN_DIR/ralph"
 echo "  $BIN_DIR/ralph-follow"
 
-# ── Step 2: Create ~/.claude/commands/ symlinks ───────────────
-echo ""
-echo "→ Creating Claude Code skill symlinks..."
+# ── Step 2: Install skill files into ~/.claude/commands/ ──────
+#
+# Prefer symlinks (files stay in sync with the repo automatically).
+# Fall back to copies on systems where symlinks aren't available
+# (e.g. Windows without Developer Mode).
+
 mkdir -p "$CLAUDE_COMMANDS_DIR"
+
+can_symlink() {
+    local test_link="$CLAUDE_COMMANDS_DIR/.ralph_symlink_test"
+    if ln -s "$COMMANDS_DIR/ralph-plan.md" "$test_link" 2>/dev/null; then
+        rm -f "$test_link"
+        return 0
+    fi
+    return 1
+}
+
+if can_symlink; then
+    INSTALL_METHOD="symlink"
+else
+    INSTALL_METHOD="copy"
+fi
+
+echo ""
+if [ "$INSTALL_METHOD" = "symlink" ]; then
+    echo "→ Creating Claude Code skill symlinks..."
+else
+    echo "→ Copying Claude Code skill files (symlinks not supported)..."
+fi
 
 for skill_file in "$COMMANDS_DIR"/ralph-*.md; do
     skill_name="$(basename "$skill_file")"
     target="$CLAUDE_COMMANDS_DIR/$skill_name"
 
-    if [ -L "$target" ]; then
-        echo "  (already exists) $target"
-    elif [ -e "$target" ]; then
-        echo "  WARNING: $target exists and is not a symlink — skipping"
-        echo "           Remove it manually and re-run install.sh if you want the skill."
+    if [ "$INSTALL_METHOD" = "symlink" ]; then
+        if [ -L "$target" ]; then
+            echo "  (already linked) $target"
+        elif [ -e "$target" ]; then
+            echo "  WARNING: $target exists and is not a symlink — skipping"
+            echo "           Remove it manually and re-run install.sh if you want the skill."
+        else
+            ln -s "$skill_file" "$target"
+            echo "  $target → $skill_file"
+        fi
     else
-        ln -s "$skill_file" "$target"
-        echo "  $target → $skill_file"
+        # Copy mode: always overwrite to keep files current
+        if [ -L "$target" ]; then
+            rm -f "$target"
+        fi
+        cp "$skill_file" "$target"
+        echo "  $target (copied)"
     fi
 done
+
+if [ "$INSTALL_METHOD" = "copy" ]; then
+    echo ""
+    echo "  NOTE: Skills were copied, not symlinked. Run 'ralph update'"
+    echo "        after pulling new versions to refresh them."
+fi
 
 # ── Step 3: Add ~/.ralph/bin to PATH ──────────────────────────
 echo ""

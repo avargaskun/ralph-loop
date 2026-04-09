@@ -25,6 +25,16 @@ for arg in "$@"; do
     fi
 done
 
+# Detect python command (python3 on Linux/macOS, python on Windows)
+if command -v python3 &>/dev/null; then
+    PYTHON_CMD="python3"
+elif command -v python &>/dev/null; then
+    PYTHON_CMD="python"
+else
+    echo "Error: Python not found. Install Python 3 first."
+    exit 1
+fi
+
 POLL_INTERVAL=2
 
 CURRENT_FILE=""
@@ -193,7 +203,7 @@ while true; do
 
         CURRENT_FILE="$LATEST"
 
-        tail -n +1 -f "$CURRENT_FILE" | python3 -u -c "$PYTHON_FORMATTER" &
+        tail -n +1 -f "$CURRENT_FILE" | "$PYTHON_CMD" -u -c "$PYTHON_FORMATTER" &
         FOLLOWER_PID=$!
     fi
 
