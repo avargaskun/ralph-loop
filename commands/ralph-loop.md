@@ -29,7 +29,6 @@ Before starting the loop, verify:
 
 1. `ralph/projects/<project-name>/plan.md` exists — this is required.
 2. `ralph/projects/<project-name>/design.md` may or may not exist — note whether it's present.
-3. If `ralph/projects/<project-name>/.stop` exists, delete it — it's stale from a previous run.
 
 If the plan file doesn't exist, tell the user to run `/ralph-plan <project-name>` first, then stop.
 
@@ -129,23 +128,21 @@ Before starting the loop, output:
 
 Execute iterations sequentially using the Agent tool:
 
-1. **Check for stop signal.** Before spawning the subagent, check if `ralph/projects/<project-name>/.stop` exists. If it does, remove the file and stop the loop gracefully — output the stop message and skip to Step 6 (final output), reporting that the loop was stopped by the user.
-
-2. **Spawn a subagent** with:
+1. **Spawn a subagent** with:
    - `description: "Execute phase N of ralph project <project-name>"`
    - `prompt: <the composed prompt from Step 2>`
    - `model: <SUBAGENT_MODEL>` (chosen in Step 3)
    - `run_in_background: true` (non-blocking — you will be notified on completion)
 
-3. **After the subagent completes**, examine its output for completion signals:
+2. **After the subagent completes**, examine its output for completion signals:
    - If output contains `RALPH_PHASE_COMPLETE`: The phase is done. Continue to the next iteration.
    - If output contains `RALPH_ALL_COMPLETE`: All phases are complete. Stop the loop and output success message.
    - If output contains `RALPH_BLOCKED`: The subagent deliberately stopped at a hard blocker. Do NOT continue automatically — follow "Handling a blocked phase" below.
    - If no signal is found: Re-read the current phase's Observations in the plan file. If a new `**BLOCKED**` entry appeared, treat this as `RALPH_BLOCKED` (the output signal was lost). Otherwise log a warning but continue to the next iteration.
 
-4. **Preserve context between iterations** — after each subagent completes, read the plan file's "Current phase" field and record it in your own working notes so you know where the project stands. This helps you provide accurate status if the user asks or if the loop is interrupted.
+3. **Preserve context between iterations** — after each subagent completes, read the plan file's "Current phase" field and record it in your own working notes so you know where the project stands. This helps you provide accurate status if the user asks or if the loop is interrupted.
 
-5. **Output iteration status** before each agent:
+4. **Output iteration status** before each agent:
    ```
    ┌──────────────────────────────────────────────
    │ Iteration N / <max_iterations>
@@ -153,10 +150,10 @@ Execute iterations sequentially using the Agent tool:
    └──────────────────────────────────────────────
    ```
 
-6. **Repeat** until:
+5. **Repeat** until:
    - `RALPH_ALL_COMPLETE` is detected, OR
    - Maximum iterations reached, OR
-   - Stop file detected (`.stop` in the project directory)
+   - The user asks you to stop
 
 ### Step 6: Final output
 
@@ -177,7 +174,7 @@ When the loop completes:
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ```
 
-- If stopped via stop file:
+- If the user asked to stop:
   ```
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     Stopped by user after N iterations.
@@ -213,7 +210,7 @@ When a subagent reports `RALPH_BLOCKED`:
 
 ## Important Notes
 
-- **Stopping the loop.** The user can stop the loop gracefully by creating a file `ralph/projects/<project-name>/.stop` (e.g., `touch ralph/projects/<project-name>/.stop`). The loop checks for this file before each iteration. A running subagent will also check for it before executing build/test commands. When the stop file is consumed, the loop outputs the final status and stops.
+- **Stopping the loop.** Because the loop runs inside this Claude session, the user can stop it at any time — by interrupting (Esc) or by telling you to stop. You remain responsive between iterations, so when the user asks to stop, finish reporting status for the current iteration and halt gracefully without spawning the next subagent. The loop is resumable: re-running `/ralph-loop <project-name>` picks up from where it left off.
 - **Sequential execution only.** Do NOT spawn subagents in parallel — they will conflict on file modifications. Wait for each background agent to complete before spawning the next.
 - **Remain responsive between iterations.** While a background agent is running, you can answer user questions, provide status updates, or discuss the project. When the agent completes, proceed with the next iteration.
 - **No session persistence across subagents.** Each subagent starts fresh with only the prompt and the plan/design files.

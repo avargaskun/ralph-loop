@@ -30,7 +30,6 @@ Work through each unchecked task in the phase, in order. Check off each task (`-
 - **Follow project conventions.** Read `CLAUDE.md` files in relevant directories before making changes.
 - **Consult the design document (if present).** If a design spec exists at `{{DESIGN_FILE}}`, refer to it for architectural decisions, schema details, and code patterns.
 - **Build and test.** After making changes, build the project and run the test suite to verify your changes. Use whatever build and test commands are appropriate for this project (check `CLAUDE.md` or the plan's observations for the correct commands).
-- **Check for stop signal.** Before running any build or test command, check if a file named `.stop` exists in the same directory as the plan file. If it exists, stop immediately: check off any tasks you already completed, write observations noting you were stopped via the stop file, commit all changes, and output `RALPH_PHASE_COMPLETE`.
 - **One phase only.** Do not work on subsequent phases. If you discover work that belongs to a later phase, note it in Observations instead.
 - **No placeholders.** Implement functionality completely. Stubs and TODOs waste future iterations.
 - **Never ask questions.** You are running headless with no human in the loop. Do NOT use `AskUserQuestion` or any interactive tool — there is nobody to answer. If a task requires confirmation or decisions, use your best judgment based on the plan and design document, and note your decision in Observations.
