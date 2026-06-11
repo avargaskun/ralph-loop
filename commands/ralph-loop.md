@@ -71,7 +71,45 @@ HAS_DESIGN = true OR false
 <contents of ralph/PROMPT.md>
 ```
 
-### Step 3: Display starting information
+**Conditional — stuck protocol (Sonnet only):** When `SUBAGENT_MODEL` is `sonnet` (chosen in Step 3), append the following section to every spawned subagent's prompt after a separator, substituting `<N>` with the current iteration number:
+
+```markdown
+---
+
+## When you are stuck
+
+Declare yourself blocked rather than grinding on a hard problem. You are blocked if ANY of these occur:
+
+- You have made 3 distinct attempts to fix the same failing test/build error and the error is unchanged, or you are alternating between the same two failure states.
+- Progress requires something you cannot obtain (a missing credential, a broken external dependency, an ambiguous requirement that needs a human decision).
+
+When blocked, do NOT keep trying. Instead:
+
+1. Revert any half-finished changes that would leave the build broken. Keep completed, working tasks checked off.
+2. Add an entry to the current phase's **Observations** section:
+   `- **BLOCKED (iteration <N>):** <exact error or obstacle> — Tried: <distinct attempts made> — Hypothesis: <best guess at root cause>`
+3. Commit the changes (following the git staging rule).
+4. Do NOT advance the **Current phase** field and do NOT check off incomplete tasks.
+5. End your output with `RALPH_BLOCKED` on its own line and stop.
+```
+
+### Step 3: Choose the subagent model
+
+Determine which model to use for the phase-execution subagents:
+
+1. If the user's extra arguments already name a model (`sonnet`, `opus`, or
+   `fable`), use it and skip the question.
+2. Otherwise ask, using the AskUserQuestion tool:
+   - Question: "Which model should Ralph use for the phase-execution subagents?"
+   - Options:
+     - "opus" (Recommended) — strong multi-step reasoning; the loop's default
+     - "fable" — most capable tier; highest cost, best for the hardest plans
+     - "sonnet" — fastest and cheapest; fine for mechanical, well-specified plans
+3. Record the choice as SUBAGENT_MODEL and use it for every iteration.
+4. If a subagent fails to launch because the chosen model isn't available on
+   this account, fall back to "opus", notify the user, and continue the loop.
+
+### Step 4: Display starting information
 
 Before starting the loop, output:
 
@@ -82,26 +120,28 @@ Before starting the loop, output:
   Project:  <project-name>
   Design:   <path or "(none)">
   Plan:     ralph/projects/<project-name>/plan.md
+  Model:    <SUBAGENT_MODEL>
   Max:      <max_iterations> iterations
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-### Step 4: Run the loop
+### Step 5: Run the loop
 
 Execute iterations sequentially using the Agent tool:
 
-1. **Check for stop signal.** Before spawning the subagent, check if `ralph/projects/<project-name>/.stop` exists. If it does, remove the file and stop the loop gracefully — output the stop message and skip to Step 5 (final output), reporting that the loop was stopped by the user.
+1. **Check for stop signal.** Before spawning the subagent, check if `ralph/projects/<project-name>/.stop` exists. If it does, remove the file and stop the loop gracefully — output the stop message and skip to Step 6 (final output), reporting that the loop was stopped by the user.
 
 2. **Spawn a subagent** with:
    - `description: "Execute phase N of ralph project <project-name>"`
    - `prompt: <the composed prompt from Step 2>`
-   - `model: "opus"` (use Opus for complex multi-step reasoning)
+   - `model: <SUBAGENT_MODEL>` (chosen in Step 3)
    - `run_in_background: true` (non-blocking — you will be notified on completion)
 
 3. **After the subagent completes**, examine its output for completion signals:
    - If output contains `RALPH_PHASE_COMPLETE`: The phase is done. Continue to the next iteration.
    - If output contains `RALPH_ALL_COMPLETE`: All phases are complete. Stop the loop and output success message.
-   - If neither signal is found: Log a warning but continue to the next iteration.
+   - If output contains `RALPH_BLOCKED`: The subagent deliberately stopped at a hard blocker. Do NOT continue automatically — follow "Handling a blocked phase" below.
+   - If no signal is found: Re-read the current phase's Observations in the plan file. If a new `**BLOCKED**` entry appeared, treat this as `RALPH_BLOCKED` (the output signal was lost). Otherwise log a warning but continue to the next iteration.
 
 4. **Preserve context between iterations** — after each subagent completes, read the plan file's "Current phase" field and record it in your own working notes so you know where the project stands. This helps you provide accurate status if the user asks or if the loop is interrupted.
 
@@ -118,7 +158,7 @@ Execute iterations sequentially using the Agent tool:
    - Maximum iterations reached, OR
    - Stop file detected (`.stop` in the project directory)
 
-### Step 5: Final output
+### Step 6: Final output
 
 When the loop completes:
 
@@ -145,6 +185,30 @@ When the loop completes:
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ```
 
+- If the loop stopped on a blocked phase (user chose not to retry):
+  ```
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    Blocked on <phase> after N iterations.
+    See the BLOCKED entry in the plan's Observations.
+    Use /ralph-loop <project-name> to continue once resolved.
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ```
+
+---
+
+## Handling a blocked phase
+
+When a subagent reports `RALPH_BLOCKED`:
+
+1. Re-read the plan file and find the new `**BLOCKED**` entry in the current phase's Observations.
+2. Explain the blockage to the user in plain language: what the agent was attempting, what it tried, the exact error, and its hypothesis.
+3. Ask the user how to proceed. Choose the form that fits the situation:
+   - If the sensible remedies are discrete, the AskUserQuestion tool works well. Typical options: retry this phase with a stronger model (`opus`, or `fable` if not already in use); stop the loop to investigate manually; continue to the next iteration anyway.
+   - If the blockage is ambiguous, or unblocking requires information only the user can provide (a decision, a credential, a clarified requirement), do NOT manufacture options for AskUserQuestion. Explain the issue in the chat and ask for open-ended input instead.
+4. If the user chooses a retry with a stronger model: spawn the same phase with that model, prepending this line to the composed prompt: "A previous attempt at this phase was blocked — read the **BLOCKED** entry in the current phase's Observations before starting. If you get past the blocker, add an **UNBLOCKED:** note to Observations describing what worked." Revert to `SUBAGENT_MODEL` for subsequent iterations unless the user says otherwise.
+5. If the user provides unblocking input in chat, pass it to the next attempt by appending it to the composed prompt as additional context.
+6. Blocked attempts and retries count toward `max_iterations`.
+
 ---
 
 ## Important Notes
@@ -153,8 +217,9 @@ When the loop completes:
 - **Sequential execution only.** Do NOT spawn subagents in parallel — they will conflict on file modifications. Wait for each background agent to complete before spawning the next.
 - **Remain responsive between iterations.** While a background agent is running, you can answer user questions, provide status updates, or discuss the project. When the agent completes, proceed with the next iteration.
 - **No session persistence across subagents.** Each subagent starts fresh with only the prompt and the plan/design files.
+- **`ralph/EXTENSIONS.md` is not for executors.** That file extends the authoring/review skills (explore, design, plan, critique, review, address). Do NOT append it to subagent prompts — the only project-local content injected into execution subagents is `ralph/PROMPT.md`.
 - **The subagent is autonomous.** It will NOT ask questions (per PROMPT.md instructions). It must make decisions based on the plan and design.
-- **Completion signals are critical.** The loop depends on the agent outputting `RALPH_PHASE_COMPLETE` after each phase and `RALPH_ALL_COMPLETE` when all done.
+- **Completion signals are critical.** The loop depends on the agent outputting `RALPH_PHASE_COMPLETE` after each phase, `RALPH_ALL_COMPLETE` when all done, and `RALPH_BLOCKED` when a Sonnet subagent stops at a hard blocker.
 
 ---
 
@@ -177,6 +242,7 @@ After the loop completes (successfully or via max iterations), read the plan fil
 - Next steps:
   - If all phases complete: `Use /ralph-review <project-name> to review the implementation`
   - If max iterations reached: `Use /ralph-loop <project-name> to continue from Phase X`
+  - If blocked: Summarize the blocker from the BLOCKED entry and suggest an unblocking action
   - If error/warning occurred: Explain what happened and suggest next action
 
 ## Loop state tracking

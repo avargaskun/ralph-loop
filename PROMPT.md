@@ -16,7 +16,7 @@ The plan contains phases (e.g., "Phase 0", "Phase 1"), each with a **Tasks** sec
 
 ### 2. Read prior observations
 
-Each phase has an **Observations** section. Read ALL observations from completed phases — they contain discoveries, deviations, and context from prior iterations that you MUST account for.
+Each phase has an **Observations** section. Read the observations from ALL phases — both completed phases and the phase you are about to work on, which may contain notes from a previous attempt at it. They contain discoveries, deviations, and context from prior iterations that you MUST account for.
 
 ### 3. Pick the next phase
 
