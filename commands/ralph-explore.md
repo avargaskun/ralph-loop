@@ -22,6 +22,15 @@ ralph/
 
 Create these directories if they do not exist. Do NOT error out or stop — just create them silently and continue.
 
+## Project extensions
+
+Check for two optional repo-local extension files and read them if present:
+
+1. `ralph/EXTENSIONS.md` — project-specific guidance for the ralph skills, organized in sections named after the skills. Read the `## General` section and the `## Explore` section; ignore all other sections. Treat the content as guidance layered on top of this skill — it extends these instructions and never replaces them. If it conflicts with this skill's protocol (output files, document structure, workflow), this skill wins.
+2. `ralph/PROMPT.md` — the project-local addendum appended to execution subagent prompts (build/test commands, conventions, gotchas). Read it as background context — it often reveals constraints and conventions that belong in the briefing's "Constraints discovered".
+
+Both files are optional — missing files are the normal case; continue silently.
+
 ## Your task
 
 Explore the idea through deep codebase analysis, produce `ralph/projects/<project-name>/explore.md` as a structured briefing, and then engage the user interactively to resolve questions and refine the direction. The exploration is ready when the user is satisfied and wants to move to `/ralph-design`.

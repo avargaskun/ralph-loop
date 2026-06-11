@@ -22,6 +22,15 @@ ralph/
 
 Create these directories if they do not exist. Do NOT error out or stop — just create them silently and continue.
 
+## Project extensions
+
+Check for two optional repo-local extension files and read them if present:
+
+1. `ralph/EXTENSIONS.md` — project-specific guidance for the ralph skills, organized in sections named after the skills. Read the `## General` section and the `## Plan` section; ignore all other sections. Treat the content as guidance layered on top of this skill — it extends these instructions and never replaces them. If it conflicts with this skill's protocol (output files, document structure, workflow), this skill wins.
+2. `ralph/PROMPT.md` — the project-local addendum appended to execution subagent prompts. It is the most reliable source for this project's build/test commands — prefer commands found there for the build + test gates before asking the user.
+
+Both files are optional — missing files are the normal case; continue silently.
+
 ## Prerequisites
 
 Before writing the plan, read:
@@ -49,7 +58,7 @@ Create `ralph/projects/<project-name>/plan.md` following the structure below. Th
 
 ### 2. How to Use This Plan
 
-Include this section verbatim (adapt the build/test command to match this project's actual tooling — check `CLAUDE.md` or ask the user if unclear):
+Include this section verbatim (adapt the build/test command to match this project's actual tooling — check `ralph/PROMPT.md` and `CLAUDE.md`, or ask the user if unclear):
 
 ```markdown
 ---
@@ -75,7 +84,7 @@ Phases that add or modify integration/E2E tests must also run them. Include any 
 A phase is **not complete** until the gate succeeds and **all** tests written or modified in that phase have been executed. Fix failures before marking the phase done.
 ```
 
-If you cannot determine the build/test commands from `CLAUDE.md` or context, ask the user before writing the plan.
+If you cannot determine the build/test commands from `ralph/PROMPT.md`, `CLAUDE.md`, or context, ask the user before writing the plan.
 
 ### 3. Summary (optional)
 

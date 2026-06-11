@@ -22,6 +22,15 @@ ralph/
 
 Create these directories if they do not exist. Do NOT error out or stop — just create them silently and continue.
 
+## Project extensions
+
+Check for two optional repo-local extension files and read them if present:
+
+1. `ralph/EXTENSIONS.md` — project-specific guidance for the ralph skills, organized in sections named after the skills. Read the `## General` section and the `## Address` section; ignore all other sections. Treat the content as guidance layered on top of this skill — it extends these instructions and never replaces them. If it conflicts with this skill's protocol (output files, document structure, workflow), this skill wins.
+2. `ralph/PROMPT.md` — the project-local addendum appended to execution subagent prompts (build/test commands, conventions, gotchas). Read it as background context — it documents the build/test commands used to verify each fix and the conventions fixes must follow.
+
+Both files are optional — missing files are the normal case; continue silently.
+
 ## Your task
 
 Read `ralph/projects/<project-name>/review.md`, fix each finding, and record resolutions inline. Follow the methodology below in order.
@@ -46,7 +55,7 @@ For each finding:
 
 1. **Read the relevant code** referenced in the finding.
 2. **Implement the fix.** Follow the review's suggested fix if one is provided, or use your best judgment.
-3. **Build and test** after each fix to verify nothing is broken. Use this project's build/test commands (check `CLAUDE.md` or the plan's observations).
+3. **Build and test** after each fix to verify nothing is broken. Use this project's build/test commands (check `ralph/PROMPT.md`, `CLAUDE.md`, or the plan's observations).
 4. **Update the review document** — append a `> **Resolution:**` blockquote immediately after the finding's description, and append `— **FIXED**` to the finding's title line.
 
 ### Step 4: Preserve original finding text

@@ -128,6 +128,7 @@ After installation, projects using ralph-loop only need:
 <repo-root>/
 └── ralph/
     ├── PROMPT.md           # OPTIONAL: project-specific addendum (see below)
+    ├── EXTENSIONS.md       # OPTIONAL: per-skill guidance for authoring/review skills (see below)
     ├── projects/
     │   └── <project-name>/
     │       ├── explore.md  # Created during /ralph-explore phase (optional)
@@ -177,6 +178,22 @@ An **optional** file that project maintainers commit to their repository. It is 
 - Signal handling or commit conventions (already covered)
 
 If `ralph/PROMPT.md` is absent, the loop runs with only the generic prompt. This is the correct behavior for most projects.
+
+The addendum is also read **as background context** (not appended) by the authoring/review skills (`/ralph-explore`, `/ralph-design`, `/ralph-plan`, `/ralph-critique`, `/ralph-review`, `/ralph-address`), so shared facts such as build/test commands are written once and seen by every phase of the SDLC.
+
+### 3. Per-Skill Extensions (`ralph/EXTENSIONS.md` in the repo)
+
+An **optional** file that extends the authoring/review skills the same way the addendum extends the executor. Two different consumption models drive the two-file split:
+
+- The executor path consumes its extension by **verbatim prompt injection** (including via a plain shell script), so `ralph/PROMPT.md` stays a whole-file contract with no internal structure to parse.
+- The interactive skills are **intelligent readers**, so `ralph/EXTENSIONS.md` can be one shared file organized in sections — each skill reads `## General` plus the section matching its name (`## Explore`, `## Design`, `## Plan`, `## Critique`, `## Review`, `## Address`) and ignores the rest.
+
+Rules, mirroring the addendum:
+
+- **Extends, never replaces.** Section content is guidance layered on the skill; protocol (output files, document structures, signals, commit conventions) stays owned by the bundled skills so `git pull` upgrades keep propagating.
+- **Never injected into executors.** Execution subagents receive only `ralph/PROMPT.md`. This keeps loop iterations lean and prevents authoring/review guidance from causing executor scope creep.
+- **Boundary with `CLAUDE.md`.** Guidance that applies to all Claude work in the repo belongs in `CLAUDE.md`. `EXTENSIONS.md` is only for ralph-phase-specific guidance (e.g., "designs must include a rollout section", "reviews must check the accessibility checklist").
+- Missing file or missing section is the normal case.
 
 ### Runtime Composition (pseudocode)
 

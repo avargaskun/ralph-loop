@@ -94,6 +94,7 @@ After installation, projects using ralph-loop only need:
 <your-repo>/
 └── ralph/
     ├── PROMPT.md           # OPTIONAL: project-specific addendum (appended to bundled prompt)
+    ├── EXTENSIONS.md       # OPTIONAL: per-skill guidance for the authoring/review skills
     ├── projects/
     │   └── <project-name>/
     │       ├── design.md   # Created by /ralph-design
@@ -119,6 +120,38 @@ An optional file you commit to your project. It is **appended** to the bundled g
 Use `npm run build` to compile and `npm test` to run the test suite.
 All new TypeScript files must be registered in tsconfig.json.
 ```
+
+The authoring/review skills (`/ralph-explore`, `/ralph-design`, `/ralph-plan`, `/ralph-critique`, `/ralph-review`, `/ralph-address`) also read this file as background context — e.g., `/ralph-plan` takes the build/test gate commands from it instead of asking — so shared facts like build commands only need to be written here once.
+
+### Per-skill extensions (`ralph/EXTENSIONS.md`)
+
+An optional file you commit to your project to extend the *authoring and review* skills. It is organized in sections named after the skills; each skill reads `## General` plus its own section and ignores the rest:
+
+```markdown
+# ralph/EXTENSIONS.md (example)
+
+## General
+All ralph project documents must use British English spelling.
+
+## Design
+Every design must include a rollout/feature-flag section.
+
+## Plan
+Cap phases at 6 tasks — this codebase's build is slow.
+
+## Review
+Check the accessibility checklist in docs/a11y.md for any UI change.
+```
+
+Available sections: `## General`, `## Explore`, `## Design`, `## Plan`, `## Critique`, `## Review`, `## Address`. The content extends the skills — it never replaces their protocol (output files, document structure, signals). This file is **never** injected into execution subagents; executors only receive `ralph/PROMPT.md`.
+
+**Where does a rule go?**
+
+| The rule applies to... | Put it in |
+|---|---|
+| Execution subagents, every loop iteration | `ralph/PROMPT.md` |
+| A specific authoring/review phase | the matching section of `ralph/EXTENSIONS.md` |
+| All Claude work in the repo (ralph or not) | `CLAUDE.md` |
 
 ---
 

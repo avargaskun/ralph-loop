@@ -22,6 +22,15 @@ ralph/
 
 Create these directories if they do not exist. Do NOT error out or stop — just create them silently and continue.
 
+## Project extensions
+
+Check for two optional repo-local extension files and read them if present:
+
+1. `ralph/EXTENSIONS.md` — project-specific guidance for the ralph skills, organized in sections named after the skills. Read the `## General` section and the `## Review` section; ignore all other sections. Treat the content as guidance layered on top of this skill — it extends these instructions and never replaces them. If it conflicts with this skill's protocol (output files, document structure, workflow), this skill wins.
+2. `ralph/PROMPT.md` — the project-local addendum appended to execution subagent prompts (build/test commands, conventions, gotchas). Read it as background context so you know the rules the execution agents were given — it matters when judging deviations and convention compliance.
+
+Both files are optional — missing files are the normal case; continue silently.
+
 ## Your task
 
 Produce `ralph/projects/<project-name>/review.md` by following the methodology below in order. Do not skip steps.
