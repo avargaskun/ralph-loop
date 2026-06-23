@@ -77,6 +77,7 @@ Beyond the design-level concerns, check the plan's structure:
 - **Test coverage** — does each phase include tests for the behavior it introduces? Are integration tests placed in the right phases?
 - **Gate commands** — are build/test gates appropriate for each phase? Do phases with integration tests include the right gate commands?
 - **Missing tasks** — are there implementation steps implied by the design that the plan doesn't cover?
+- **Design backfill and investigation** — did the plan invent an architectural decision that should live in `design.md` (a guess whose reasoning the memory-less executor can't see)? Conversely, are any investigation tasks or phases padding for gaps the design already answers? Flag both.
 
 ---
 

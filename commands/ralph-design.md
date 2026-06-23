@@ -161,6 +161,7 @@ Guidelines for good questions:
 - **Document what you decided *not* to do.** If you considered an approach and rejected it, a brief note prevents the agent from rediscovering it.
 - **Use tables for comparisons.** Current vs. new, option A vs. option B, before vs. after.
 - **Keep the audience in mind.** The primary reader is a code agent executing one phase at a time with no memory between iterations. Everything it needs to make correct architectural decisions must be in this document or the plan's observations.
+- **Concrete enough to plan against.** Before declaring the design done, check each section: could `/ralph-plan` write non-placeholder tasks against it without inventing an architectural decision? Where it couldn't, resolve the decision here now — backfilling it during planning is more expensive and easier to get wrong.
 
 ---
 

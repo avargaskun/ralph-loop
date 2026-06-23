@@ -38,9 +38,21 @@ Before writing the plan, read:
 1. `ralph/projects/<project-name>/design.md` — the source of truth for architecture, trade-offs, and resolved decisions. If this file doesn't exist, ask the user to describe what they want to plan for. Use their description as the basis for the plan, and document key technical choices in the "Design Decisions" section of the plan.
 2. Any relevant `CLAUDE.md` files in the repository — for project conventions, build commands, and coding standards.
 
+## Assess design readiness
+
+Before writing phases, judge whether the design lets you produce concrete, non-placeholder tasks. For each section you'll plan against, ask: *could a memory-less agent implement this without re-deriving a decision the design left open?*
+
+Usually the answer is yes — the design is actionable; proceed. Only when a real gap would force you to invent an answer, route it by who can resolve it and where the answer must durably live:
+
+- **Architectural decision you can settle by reading the code** → investigate (use sub-agents for independent areas), decide, and write the decision into `design.md` itself — the durable source of truth every loop iteration re-reads, not the plan. Note any such backfill in your final summary.
+- **Cheap assumption verifiable at runtime** → don't guess; make confirming it the first task of the phase that depends on it (see Phase Design Guidelines).
+- **Judgment call only the user can make** → leave it as an Open Question rather than inventing an answer.
+
+This is the exception, not the default — the same bar as Open Questions: skip it when the design is actionable as written. Don't investigate to appear thorough.
+
 ## Your task
 
-Create `ralph/projects/<project-name>/plan.md` following the structure below. The plan must be complete and concrete — no placeholder tasks, no deferred decisions.
+Create `ralph/projects/<project-name>/plan.md` following the structure below. The plan must be complete and concrete — no placeholder tasks, no deferred decisions. (A first-task investigation that resolves a known unknown and records the finding is not a placeholder; a vague "figure out X later" is.)
 
 ---
 
@@ -166,6 +178,7 @@ If — and only if — there are genuine ambiguities, missing information, or de
 - **Content-based code references:** When tasks reference specific locations within a file, use content-based descriptions (function name, the code pattern to match) rather than line numbers alone. Line numbers shift as earlier phases modify files, making them unreliable for later phases. Line numbers may be included as supplementary context but should not be the primary identifier. Example: "In `checkParameters`, change `_.isEmpty(x)` to `!x`" rather than "Line 72: change…"
 - **Code sketches in tasks:** Include implementation sketches for non-obvious logic.
 - **Early phases establish scaffolding** that later phases fill in. Don't try to implement everything in Phase 0.
+- **Investigation belongs at the head of a phase, not in its own phase — usually.** When a phase depends on a cheap fact you couldn't verify while planning (an API signature, whether a library supports X), make confirming it task N.1 and have the agent record the result in Observations; the phase's normal build + test gate still applies. Reserve a *standalone* investigation phase only when one finding gates several later phases — such a phase adds no logic, so its gate is the recorded finding plus the baseline build, and it earns its own Observations block that later phases reference.
 - **Integration test phases need context room for troubleshooting.** Integration tests interact with deployed systems and have more failure modes than unit tests (network, timing, environment, deployment state). When a phase includes integration tests, keep the implementation work in that phase small enough that the agent has context room to investigate and fix test failures. If a phase has both substantial implementation work and integration tests, consider splitting it: implementation + unit tests in one phase, then integration tests (with deployment) in the next.
 - **The final phase** should include a verification pass: code review, logging review, design compliance check, and a final build + test gate.
 
