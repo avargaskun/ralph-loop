@@ -128,7 +128,7 @@ Before starting the loop, output:
 
 Execute iterations sequentially using the Agent tool:
 
-1. **Spawn a subagent** with:
+1. **Spawn a subagent.** First confirm the previous iteration's agent has been reaped — exactly one Ralph execution agent should ever be alive at a time (see "Reaping finished agents"). Then spawn with:
    - `description: "Execute phase N of ralph project <project-name>"`
    - `prompt: <the composed prompt from Step 2>`
    - `model: <SUBAGENT_MODEL>` (chosen in Step 3)
@@ -143,7 +143,7 @@ Execute iterations sequentially using the Agent tool:
    a. **Attribute by task-id.** Compare the notification's task-id to the current expected agent (recorded in 5.1). A notification from any *other* task-id is a prior/idle agent re-firing — ignore it for control flow and do not trust its summary (a finished agent re-firing and narrating later phases is noise, not progress). It may prompt you to run the liveness check (5.3), but it must never, on its own, advance the loop or declare completion.
 
    b. **Confirm against git + the plan file.** Re-read the plan and check `git log`, comparing to the baseline from 5.1:
-      - **Phase complete** — the plan's `Current phase` has advanced past the spawned phase (or `Status` is `Complete`/`Done`) **and** that phase's task checkboxes are all `[x]`. For code-bearing phases a matching `Phase N:` commit in `git log` is corroborating evidence; **verification-only phases produce no commit — do not require one.** Advance to the next iteration. If every phase is `[x]` and `Status` is `Complete`, the project is done — emit the success message (do not require a literal `RALPH_ALL_COMPLETE` token to have appeared anywhere).
+      - **Phase complete** — the plan's `Current phase` has advanced past the spawned phase (or `Status` is `Complete`/`Done`) **and** that phase's task checkboxes are all `[x]`. For code-bearing phases a matching `Phase N:` commit in `git log` is corroborating evidence; **verification-only phases produce no commit — do not require one.** **Reap the finished agent** (see "Reaping finished agents"), then advance to the next iteration. If every phase is `[x]` and `Status` is `Complete`, the project is done — reap any surviving agents and emit the success message (do not require a literal `RALPH_ALL_COMPLETE` token to have appeared anywhere).
       - **Blocked** — a new `**BLOCKED**` entry has appeared in the current phase's Observations. Follow "Handling a blocked phase" below. (This preserves the prior `RALPH_BLOCKED` behavior; the Observations entry, not the token, is the ground truth.)
       - **Not done** — neither of the above. Do NOT advance. Run the liveness check (5.3) before deciding to keep waiting.
 
@@ -210,13 +210,14 @@ When the loop completes:
 When a subagent reports `RALPH_BLOCKED`:
 
 1. Re-read the plan file and find the new `**BLOCKED**` entry in the current phase's Observations.
-2. Explain the blockage to the user in plain language: what the agent was attempting, what it tried, the exact error, and its hypothesis.
-3. Ask the user how to proceed. Choose the form that fits the situation:
+2. **Reap the blocked agent** — call `TaskStop(<its task-id>)`. It has done all it will do, and any retry spawns a fresh agent; leaving it alive only invites stale re-fires (see "Reaping finished agents").
+3. Explain the blockage to the user in plain language: what the agent was attempting, what it tried, the exact error, and its hypothesis.
+4. Ask the user how to proceed. Choose the form that fits the situation:
    - If the sensible remedies are discrete, the AskUserQuestion tool works well. Typical options: retry this phase with a stronger model (`opus`, or `fable` if not already in use); stop the loop to investigate manually; continue to the next iteration anyway.
    - If the blockage is ambiguous, or unblocking requires information only the user can provide (a decision, a credential, a clarified requirement), do NOT manufacture options for AskUserQuestion. Explain the issue in the chat and ask for open-ended input instead.
-4. If the user chooses a retry with a stronger model: spawn the same phase with that model, prepending this line to the composed prompt: "A previous attempt at this phase was blocked — read the **BLOCKED** entry in the current phase's Observations before starting. If you get past the blocker, add an **UNBLOCKED:** note to Observations describing what worked." Revert to `SUBAGENT_MODEL` for subsequent iterations unless the user says otherwise.
-5. If the user provides unblocking input in chat, pass it to the next attempt by appending it to the composed prompt as additional context.
-6. Blocked attempts and retries count toward `max_iterations`.
+5. If the user chooses a retry with a stronger model: spawn the same phase with that model, prepending this line to the composed prompt: "A previous attempt at this phase was blocked — read the **BLOCKED** entry in the current phase's Observations before starting. If you get past the blocker, add an **UNBLOCKED:** note to Observations describing what worked." Revert to `SUBAGENT_MODEL` for subsequent iterations unless the user says otherwise.
+6. If the user provides unblocking input in chat, pass it to the next attempt by appending it to the composed prompt as additional context.
+7. Blocked attempts and retries count toward `max_iterations`.
 
 ---
 
@@ -224,19 +225,31 @@ When a subagent reports `RALPH_BLOCKED`:
 
 When the liveness check (Step 5.3) shows the current expected agent is dead or vanished — `TaskOutput` returns "No task found", or the task completed without an authoritative outcome — do NOT keep waiting and do NOT trust any stale notification. Recover:
 
-1. **Inspect the working tree** for the phase's on-disk work, and **run the phase's build + test gate** (the same gate `PROMPT.md` requires before a phase counts as done).
-2. **If the gate is green:** the phase effectively completed. Check off the phase's tasks, add an Observations entry noting the recovery (e.g. `- **RECOVERED (iteration <N>):** agent terminated without signalling; build+test gate green — finishing the phase.`), advance the `Current phase`, and commit (following the git staging rule). Continue the loop.
-3. **If the gate is red or the work is incomplete:** reset to the last clean phase commit (`git reset --hard <last good Phase N commit>`, discarding the dead agent's partial work) and relaunch the same phase as a fresh iteration — optionally with a stronger model (`opus`, or `fable`).
-4. **Recovery attempts count toward `max_iterations`.**
+1. **Reap it regardless** — call `TaskStop(<the task-id>)` even though it appears dead. This is harmless if the task is already gone and guarantees a "completed but idle" agent can't linger and re-fire (see "Reaping finished agents").
+2. **Inspect the working tree** for the phase's on-disk work, and **run the phase's build + test gate** (the same gate `PROMPT.md` requires before a phase counts as done).
+3. **If the gate is green:** the phase effectively completed. Check off the phase's tasks, add an Observations entry noting the recovery (e.g. `- **RECOVERED (iteration <N>):** agent terminated without signalling; build+test gate green — finishing the phase.`), advance the `Current phase`, and commit (following the git staging rule). Continue the loop.
+4. **If the gate is red or the work is incomplete:** reset to the last clean phase commit (`git reset --hard <last good Phase N commit>`, discarding the dead agent's partial work) and relaunch the same phase as a fresh iteration — optionally with a stronger model (`opus`, or `fable`).
+5. **Recovery attempts count toward `max_iterations`.**
 
 **Signature of a stale re-fire.** A single task-id that notifies repeatedly with growing reported duration — especially one whose summary describes work outside its own phase (e.g. a finished Phase 3 agent narrating Phase 4, or repeatedly reporting it "came to rest with no live background children") — is a finished-but-idle agent re-firing, not progress. Ignore its payload and check the current expected agent's liveness (Step 5.3) instead.
 
 ---
 
+## Reaping finished agents
+
+A subagent spawned with `run_in_background: true` does **not** die when it finishes its phase — it stays alive as an idle background task. Idle agents are a root cause of the stale-notification problem: a finished agent can be woken by a timer or hook and re-fire a `<task-notification>`, pulling your attention back to phases that are already done and corrupting the loop's control flow.
+
+**Reap every agent the moment it is no longer of use.** Once you have reached an authoritative outcome for the current expected agent (Step 5.2) — phase complete, blocked, or recovered — call `TaskStop(<that task-id>)` to terminate it **before** spawning the next subagent. Stopping a task that has already finished is safe, and the agent's on-disk work (commits, plan edits) is preserved — only the live task is killed. When the loop ends for any reason, sweep the same way: reap the current agent plus any other survivors (`TaskList` or `/tasks` reveals stragglers) so none re-fire after the loop is over.
+
+Reaping does **not** replace deciding the outcome from ground truth — decide the outcome first (Step 5.2), then reap.
+
+---
+
 ## Important Notes
 
-- **Stopping the loop.** Because the loop runs inside this Claude session, the user can stop it at any time — by interrupting (Esc) or by telling you to stop. You remain responsive between iterations, so when the user asks to stop, finish reporting status for the current iteration and halt gracefully without spawning the next subagent. The loop is resumable: re-running `/ralph-loop <project-name>` picks up from where it left off.
-- **Sequential execution only.** Do NOT spawn subagents in parallel — they will conflict on file modifications. Wait for each background agent to complete before spawning the next.
+- **Stopping the loop.** Because the loop runs inside this Claude session, the user can stop it at any time — by interrupting (Esc) or by telling you to stop. You remain responsive between iterations, so when the user asks to stop, finish reporting status for the current iteration, **reap any still-alive agents (see "Reaping finished agents")**, and halt gracefully without spawning the next subagent. The loop is resumable: re-running `/ralph-loop <project-name>` picks up from where it left off.
+- **Reap finished agents.** A subagent run with `run_in_background: true` does not exit when its phase ends — it idles, and an idle agent can be re-woken by a timer or hook to fire a stale `<task-notification>` that derails the coordinator. The moment an agent's outcome is decided (complete, blocked, recovered) and before spawning the next one, kill it with `TaskStop(<task-id>)`. When the loop ends, reap every survivor. This is the primary defense against the stale-notification confusion the rules below describe; see "Reaping finished agents" for the full procedure.
+- **Sequential execution only.** Do NOT spawn subagents in parallel — they will conflict on file modifications. Wait for each background agent to complete, **then reap it**, before spawning the next.
 - **Remain responsive between iterations.** While a background agent is running, you can answer user questions, provide status updates, or discuss the project. When the agent completes, proceed with the next iteration.
 - **No session persistence across subagents.** Each subagent starts fresh with only the prompt and the plan/design files.
 - **`ralph/EXTENSIONS.md` is not for executors.** That file extends the authoring/review skills (explore, design, plan, critique, review, address). Do NOT append it to subagent prompts — the only project-local content injected into execution subagents is `ralph/PROMPT.md`.
