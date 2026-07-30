@@ -1,6 +1,6 @@
 ultrathink
 
-You are going to create a phased execution plan for a Ralph project. The plan captures the *how* — step-by-step phases with checkboxes, code sketches, and test tasks — designed to be executed by the `ralph` loop one phase at a time.
+You are going to create a phased execution plan for a Ralph project. The plan captures the *how* — step-by-step phases with checkboxes, code sketches, and test tasks — designed to be executed by the Ralph loop one phase at a time.
 
 ## Project name and input
 
@@ -53,6 +53,8 @@ This is the exception, not the default — the same bar as Open Questions: skip 
 ## Your task
 
 Create `ralph/projects/<project-name>/plan.md` following the structure below. The plan must be complete and concrete — no placeholder tasks, no deferred decisions. (A first-task investigation that resolves a known unknown and records the finding is not a placeholder; a vague "figure out X later" is.)
+
+**How phases are executed — plan for a headless agent.** Although *you* can talk to the user while authoring this plan, the plan itself is run by a different agent that cannot. Every phase is executed by a fresh, headless subagent with no memory of prior phases and no human in the loop — it sees only the plan, the design document, and the Observations recorded so far. It cannot ask questions, pause for approval, or wait for input mid-phase. Author every task so it completes autonomously: bake required decisions into the task or design, make a runtime-verifiable assumption the phase's first task, or — for a call only the user can make — lift it to Open Questions, which must be resolved before the loop runs. Never write a task that stops to consult a human.
 
 ---
 
@@ -166,6 +168,7 @@ If — and only if — there are genuine ambiguities, missing information, or de
 ## Phase Design Guidelines
 
 - **One phase = one loop iteration.** Each phase must be granular enough that an agent can complete it well within a single context window, without the system resorting to conversation compression. Context compression degrades performance and causes hallucinations — if a phase is large enough to trigger it, the phase is too large. Err on the side of smaller phases.
+- **Every task must be autonomously completable — no human in the loop.** The agent running a phase is headless and cannot stop to ask for approval, choose between options, or wait for input. Never write tasks like "get sign-off," "confirm with the user which approach," or "pause for review." Decisions the agent can't make belong in Open Questions (resolved before the loop runs), not in a task.
 - **Build + test gate is the last task in every phase.** Never skip it.
 - **Tests belong in the same phase as the code they test.** For each phase that introduces new behavior, actively consider both test types:
   - **Unit tests** are always expected for new logic.
@@ -195,6 +198,7 @@ Split on these natural boundaries:
 - **Phase too large:** If a phase has more than ~10 tasks, it's probably too big. Split it.
 - **Missing test tasks:** Every phase that adds logic needs test tasks.
 - **Implicit dependencies:** If Phase 2 depends on a specific decision made in Phase 1, document it explicitly in Phase 2's task descriptions. The agent has no memory between iterations — only the plan file and observations carry context forward.
+- **Human-in-the-loop tasks:** A task like "review with the team," "get approval before deploying," or "ask the user which option" cannot run — the executor is headless and will skip it or guess. Pre-resolve the decision in the plan or design, or lift it to Open Questions.
 - **Integration tests batched at the end:** If the plan has a phase titled "Integration Tests" that covers all integration testing for the entire feature, the tests are too far from the code they validate. Integration tests should appear in the phase where the behavior becomes end-to-end testable, not in a catch-all phase at the end. Exception: a project's first integration test may need infrastructure setup (test helpers, SSH utilities, deployment tasks) — this scaffolding can be a dedicated phase, but the tests themselves should be in the phase where the tested behavior is introduced.
 
 ---

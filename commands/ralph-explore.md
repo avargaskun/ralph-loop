@@ -58,7 +58,7 @@ Investigate:
 - **Dependencies** — what external libraries, APIs, or services are involved? What are their capabilities and limitations?
 - **Test infrastructure** — how is similar functionality tested? What test utilities exist? This informs feasibility of the testing approach.
 
-Use sub-agents for parallel exploration when investigating independent areas of the codebase. Cast a wide net — it's better to explore something irrelevant than to miss something important.
+Use sub-agents for parallel exploration when investigating independent areas of the codebase. Cast a wide net — it's better to explore something irrelevant than to miss something important. As you go, keep track of the files, docs, and external references you consult so you can populate the "Sources Consulted" section of the briefing.
 
 ### Step 3: Produce the briefing
 
@@ -149,6 +149,14 @@ A rough boundary to start from — not final, but a stake in the ground:
 - **In scope** — what the first version would include
 - **Out of scope** — what is explicitly deferred (and why)
 - **Complexity signal** — rough sense of scale. Is this a 3-phase plan or a 15-phase plan? What drives the complexity?
+
+### 8. Sources Consulted
+
+A list of what was examined during exploration, so the reader can trace the briefing back to its evidence and re-investigate anything that seems off. Include only sources that actually shaped the briefing — this is a trail of evidence, not an exhaustive log of every file opened.
+
+- **Codebase** — the key files, classes, and modules read, with paths. Group related files by concern; list everything the briefing's claims rest on.
+- **Documentation and configuration** — `CLAUDE.md` files, READMEs, config files, CI/CD setup, and any repo-local extension files (`ralph/EXTENSIONS.md`, `ralph/PROMPT.md`) that informed the briefing.
+- **External references** — libraries, APIs, or web resources consulted, with links or version numbers where applicable.
 
 ---
 
