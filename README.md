@@ -2,7 +2,7 @@
 
 A portable, installable agentic development framework for Claude Code. Ralph implements a phase-by-phase plan executor where Claude autonomously works through a structured plan one phase at a time, committing after each one.
 
-Install once to your home directory. The `ralph` CLI and six slash commands are then available in every project on your machine — no per-project file copying required.
+Install once to your home directory. The `ralph` CLI and the full set of ralph slash commands are then available in every project on your machine — no per-project file copying required.
 
 ## Installation
 
@@ -26,7 +26,13 @@ ralph my-feature            # 4. Execute the plan autonomously (shell-based)
 /ralph-address my-feature   # 6. Fix review findings
 ```
 
-All six slash commands are available in any Claude Code conversation after installation. Each one bootstraps the `ralph/projects/` folder if it doesn't exist yet.
+Or run the whole lifecycle from a single command — see [Automated flow](#automated-flow--ralph-auto-project-name-instructions):
+
+```
+/ralph-auto my-feature
+```
+
+All of these slash commands are available in any Claude Code conversation after installation. Each one bootstraps the `ralph/projects/` folder if it doesn't exist yet.
 
 ### 1. Design — `/ralph-design [project-name]`
 
@@ -83,6 +89,27 @@ After all phases complete, guides Claude to produce `ralph/projects/<name>/revie
 ### 6. Address — `/ralph-address [project-name]`
 
 Guides Claude to fix findings from `review.md` sequentially — one finding at a time using sub-agents to preserve context. Each fix is followed by a build verification and a `> **Resolution:**` blockquote appended to the finding in the review document.
+
+### Automated flow — `/ralph-auto [project-name] [instructions]`
+
+Runs the entire lifecycle from a single command. Claude becomes the coordinator: it designs with you, then drives plan, critique, execution, and review — pausing only where your judgment is genuinely needed. You can keep talking to the coordinator the whole time; guidance you give mid-run is routed to the phases it applies to.
+
+```
+/ralph-auto my-feature
+/ralph-auto my-feature brainstorm the design with me; run the review using fable
+```
+
+How it flows:
+
+1. **Design** runs interactively in your session. If you asked for a brainstorm — or the draft surfaces gaps or an ambiguous choice that could lead down very different paths — Claude discusses the alternatives with you and asks before moving on. A clean design continues to planning automatically.
+2. **Plan** and **critique** run as background subagents while the coordinator stays responsive.
+3. **Critique findings** are triaged: unambiguous ones are fixed one at a time, judgment calls are raised to you. Claude always asks before starting the loop — the last checkpoint before code gets written.
+4. **Execution** uses the in-session loop (the same machinery as `/ralph-loop`). Blocked phases and manual steps are raised to you.
+5. If the loop runs to completion, **review** runs as a subagent and its findings are triaged the same way — unambiguous fixes are applied sequentially, `/ralph-address`-style, and the rest come to you.
+
+The run is resumable: state lives entirely in the project artifacts, which are committed after every step. If a run is interrupted, re-run `/ralph-auto <project-name>` and it picks up where it left off — an existing `design.md` skips to planning, an existing `plan.md` skips to critique, unresolved findings resume the triage, and so on. This also means you can mix `/ralph-auto` freely with the individual commands.
+
+Every phase defaults to the model your session is running. Name a model in the instructions (e.g., "run the review using fable") to override a specific phase.
 
 ---
 
@@ -143,7 +170,7 @@ Cap phases at 6 tasks — this codebase's build is slow.
 Check the accessibility checklist in docs/a11y.md for any UI change.
 ```
 
-Available sections: `## General`, `## Explore`, `## Design`, `## Plan`, `## Critique`, `## Review`, `## Address`. The content extends the skills — it never replaces their protocol (output files, document structure, signals). This file is **never** injected into execution subagents; executors only receive `ralph/PROMPT.md`.
+Available sections: `## General`, `## Explore`, `## Design`, `## Plan`, `## Critique`, `## Review`, `## Address`, `## Auto`. The content extends the skills — it never replaces their protocol (output files, document structure, signals). This file is **never** injected into execution subagents; executors only receive `ralph/PROMPT.md`.
 
 **Where does a rule go?**
 
@@ -178,12 +205,14 @@ Renders the JSONL stream as colored human-readable output: thinking blocks (gray
 │   ├── ralph               # Loop executor
 │   └── ralph-follow        # Log follower/formatter
 └── commands/               # Claude Code skill files
+    ├── ralph-explore.md
     ├── ralph-design.md
     ├── ralph-plan.md
     ├── ralph-critique.md
     ├── ralph-loop.md
     ├── ralph-review.md
-    └── ralph-address.md
+    ├── ralph-address.md
+    └── ralph-auto.md
 ```
 
 `~/.claude/commands/ralph-*.md` are symlinks pointing into `~/.ralph/commands/`, so `git pull` in `~/.ralph` updates all skills automatically.

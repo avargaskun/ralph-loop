@@ -41,6 +41,7 @@ These phases map naturally to **Claude Code skills** — markdown prompt files s
 | `/ralph-critique` | Guide Claude to critically review design/plan before execution |
 | `/ralph-review` | Guide Claude to review completed implementation |
 | `/ralph-address` | Guide Claude to fix findings from a review |
+| `/ralph-auto` | Coordinate the full design → plan → critique → loop → review flow |
 
 ### Layer 2 — Autonomous Loop
 
@@ -51,6 +52,8 @@ The Execute phase is fully automated: a shell script invokes `claude -p` headles
 |---|---|
 | `ralph <project> [max_iter]` | Run the phase-by-phase execution loop |
 | `ralph-follow` | Tail and format the current iteration's JSONL log |
+
+For users who cannot run external scripts (SSO-authenticated Claude Code, PortKey API keys), the `/ralph-loop` skill runs the same loop in-session by spawning sequential subagents from the current conversation.
 
 ---
 
@@ -114,8 +117,10 @@ cd ~/.ralph && git checkout v1.2.0
     ├── ralph-design.md
     ├── ralph-plan.md
     ├── ralph-critique.md
+    ├── ralph-loop.md
     ├── ralph-review.md
-    └── ralph-address.md
+    ├── ralph-address.md
+    └── ralph-auto.md
 ```
 
 ---
@@ -186,7 +191,7 @@ The addendum is also read **as background context** (not appended) by the author
 An **optional** file that extends the authoring/review skills the same way the addendum extends the executor. Two different consumption models drive the two-file split:
 
 - The executor path consumes its extension by **verbatim prompt injection** (including via a plain shell script), so `ralph/PROMPT.md` stays a whole-file contract with no internal structure to parse.
-- The interactive skills are **intelligent readers**, so `ralph/EXTENSIONS.md` can be one shared file organized in sections — each skill reads `## General` plus the section matching its name (`## Explore`, `## Design`, `## Plan`, `## Critique`, `## Review`, `## Address`) and ignores the rest.
+- The interactive skills are **intelligent readers**, so `ralph/EXTENSIONS.md` can be one shared file organized in sections — each skill reads `## General` plus the section matching its name (`## Explore`, `## Design`, `## Plan`, `## Critique`, `## Review`, `## Address`, `## Auto`) and ignores the rest.
 
 Rules, mirroring the addendum:
 
@@ -301,6 +306,10 @@ Instructs Claude to review completed implementation by reading the design, plan 
 ### `/ralph-address` — Fix Review Findings Guide
 
 Instructs Claude to process findings from `review.md` sequentially: read each finding, implement the fix, build to verify, and append a `> **Resolution:**` blockquote directly below the finding in `review.md` — preserving the original finding text intact. Findings are processed one at a time to avoid file conflicts.
+
+### `/ralph-auto` — Full-Lifecycle Coordinator
+
+Instructs Claude to coordinate the entire design → plan → critique → loop → review flow from a single command, orchestrating the other skills rather than reimplementing them. Design and the loop run in the coordinator's own context; plan, critique, review, and per-finding fixes run as sequential background subagents carrying a headless override (never ask the user — record Open Questions in the artifact instead). User checkpoints are asymmetric: a design with gaps (or a requested brainstorm) triggers a conversation and an explicit ask before planning, a clean design continues automatically, and the loop never starts without an explicit yes after all critique findings are resolved. Critique and review findings are triaged into unambiguous (fixed sequentially, resolutions recorded with the `/ralph-address` blockquote convention) versus judgment calls (raised to the user). State lives entirely in the project artifacts, committed after every step, so an interrupted run resumes from the first incomplete artifact — and mixes freely with manual skill invocations. Every phase defaults to the coordinator's own model unless the user names an override for a specific phase.
 
 ---
 
