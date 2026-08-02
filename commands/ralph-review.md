@@ -145,6 +145,24 @@ Style issues, misleading names, minor code duplication, imprecise log messages.
 
 ---
 
+## Finding format
+
+Each finding should name the file and line, state what the code does, state why that is wrong, and give a concrete fix.
+
+**Make the fix directly actionable.** Findings are consumed by an agent that will apply them without asking anyone — it reads the code, implements the fix, and runs the build and tests. Write the suggestion so it can be acted on from the review, the design, and the code alone: name the file, the function, and the concrete change. Avoid "consider whether…" or "the author should decide…" phrasing when you have enough information to recommend one option; recommend it and say why.
+
+**Human-judgment marker.** If — and only if — resolving the finding turns on something no agent can settle from the repo, add this line to the finding:
+
+```
+> **Needs human judgment:** <the specific question, and the options if they are discrete>
+```
+
+Mark a finding when the fix depends on a product or behavioral decision (what *should* this do when the design is silent?), when the sound remedies diverge in cost or risk (revert an unjustified deviation vs. forward-fix it, and both are defensible), when the fix would change a public API, migrate data, or otherwise be hard to undo, or when the finding suggests the *design* was wrong and the correct response might be to change the design rather than the code.
+
+Default to *not* marking. Severity is not a proxy for judgment — a Critical finding with an obvious correct fix does not carry this line, and a Trivial one that turns on a product decision does. Over-marking stalls automated runs on decisions that did not need a human; under-marking gets a guess committed as though it were a decision.
+
+---
+
 ## Severity Guidelines
 
 **Critical:**
@@ -194,4 +212,4 @@ Files created/modified:
 - ralph/projects/<project-name>/review.md
 ```
 
-Then summarize the verdict and the most important findings.
+Then summarize the verdict, state how many findings carry a **Needs human judgment** line (say "none" when that is the case), and highlight the most important findings.

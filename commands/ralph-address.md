@@ -54,9 +54,10 @@ Process findings **one at a time, in severity order**: Critical first, then Impo
 For each finding:
 
 1. **Read the relevant code** referenced in the finding.
-2. **Implement the fix.** Follow the review's suggested fix if one is provided, or use your best judgment.
-3. **Build and test** after each fix to verify nothing is broken. Use this project's build/test commands (check `ralph/PROMPT.md`, `CLAUDE.md`, or the plan's observations).
-4. **Update the review document** — append a `> **Resolution:**` blockquote immediately after the finding's description, and append `— **FIXED**` to the finding's title line.
+2. **Check for a `> **Needs human judgment:**` line.** If the finding carries one, the reviewer flagged a decision that cannot be settled from the repo. Verify that claim against the code first — if the design or conventions in fact answer it, proceed normally and say so in the resolution. If the reviewer was right, ask the user the question before touching any code (AskUserQuestion for discrete options, plain chat for open-ended ones), and record their decision in the resolution blockquote. When you are running non-interactively and cannot ask, do NOT guess: leave the finding unfixed, note in its resolution that it awaits a decision, and report it in your final output.
+3. **Implement the fix.** Follow the review's suggested fix if one is provided, or use your best judgment.
+4. **Build and test** after each fix to verify nothing is broken. Use this project's build/test commands (check `ralph/PROMPT.md`, `CLAUDE.md`, or the plan's observations).
+5. **Update the review document** — append a `> **Resolution:**` blockquote immediately after the finding's description, and append `— **FIXED**` to the finding's title line.
 
 ### Step 4: Preserve original finding text
 
