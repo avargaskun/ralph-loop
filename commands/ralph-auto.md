@@ -16,6 +16,7 @@ From the standing brief, extract and remember:
 - **A brainstorm request** — e.g., "brainstorm the design with me". Forces the interactive design conversation in Step 1.
 - **An ultracode request** — the brief takes precedence: if it says to use (or not use) ultracode/workflows, obey it. If the brief is silent, respect what the repo's agent instruction files say (`CLAUDE.md`, `AGENTS.md`, or another conventional agents file) — e.g., a rule like "use ultracode for design work". Applies to the design step ONLY (see Step 1).
 - **Max loop iterations** — if the user states one; otherwise the ralph-loop default applies.
+- **Checkpoint requests** — e.g., "check with me before starting the loop", "show me the plan first". Absent such a request, the run does not pause for approval (see "Stopping is the exception" below). `ralph/EXTENSIONS.md`'s `## Auto` section may request checkpoints the same way.
 
 Maintain this as a **guidance ledger** in your working notes. Anything the user tells you mid-run joins the ledger and flows into subsequent phases. When you spawn a subagent for a phase, include every ledger entry relevant to that phase in its prompt.
 
@@ -95,7 +96,7 @@ Run `/ralph-design` **in your own context** (read `~/.ralph/commands/ralph-desig
 
 - Engage the user directly. Be clear and concise; present the alternatives with pros/cons; help them converge. This matters most when the fork is architectural — surface it as a fork, not as a leading question.
 - Fold every resolution into `design.md` (mark questions `_Resolved_`).
-- When you are confident the gaps are closed, **ask the user whether to proceed to planning — ask first, do not just continue.**
+- When you are confident the gaps are closed, say so in one line and continue to Step 2. Do not ask for permission to proceed — the user has just steered the design and can steer again at any time. Ask only if a resolution left a consequence you cannot settle yourself, or if the ledger carries a checkpoint request.
 
 If the design completes with no brainstorm requested and no gaps, say so in one line and continue to Step 2 without a checkpoint.
 
@@ -117,7 +118,13 @@ Read the critique in full, then triage every finding into exactly one bucket:
 - **Needs the user** — the finding turns on a judgment call, a trade-off, or a fact only the user knows. After the unambiguous bucket is done, raise these together: for discrete choices use AskUserQuestion; for anything open-ended, explain in chat and ask. Apply each decision and record its resolution the same way.
 - **Not actionable** — you verified the finding is wrong or moot. Record `> **Resolution:** Accepted as-is — <reason>` so resumption sees it as resolved.
 
-When every finding carries a resolution and you are confident the plan is execution-ready, **ask the user whether to start the loop. This checkpoint is unconditional — never enter Step 5 without an explicit yes.** The loop is expensive and writes code; this is the last cheap moment to change course.
+**Triage calibration — default to Unambiguous.** A finding belongs in "Needs the user" only when you genuinely cannot resolve it defensibly from the design, the plan, the codebase, `ralph/PROMPT.md`/`CLAUDE.md`, or the standing brief — a product/priority trade-off, a fact only the user knows, or a fork that changes the shape of the deliverable. These are *not* reasons to escalate: the fix is large; you would like confirmation; the finding is marked Critical; two reasonable options exist but one is clearly better for this codebase; the critique's suggestion is plausible but you would do it slightly differently. In those cases decide, record the reasoning in the `> **Resolution:**` blockquote, and move on. If the critique marks a finding as needing human judgment, treat that as a strong hint — but still verify it for yourself rather than escalating on the label alone.
+
+When every finding carries a resolution and the plan is execution-ready, proceed as follows:
+
+- **If the "Needs the user" bucket was empty** — do NOT stop. Post a short line naming the number of findings resolved and the fact that none required judgment, state that the loop is starting, and go straight to Step 5. The user is present and can interrupt (Esc) or redirect at any time; an explicit yes is not required. Stopping here defeats the purpose of `/ralph-auto`.
+- **If the "Needs the user" bucket was non-empty** — you are already in a conversation with the user, so close it by asking whether to start the loop *in that same exchange*. Do not open a separate approval round.
+- **If the ledger carries a pre-loop checkpoint request** (from the standing brief or `ralph/EXTENSIONS.md`) — always ask, regardless of the buckets.
 
 ## Step 5: Loop
 
@@ -148,7 +155,7 @@ When all findings are resolved, commit per the `/ralph-address` convention (`cho
 ## Important notes
 
 - **You are the only writer among coordinators.** Exactly one ralph subagent may be alive at any time, and Steps 4/7 fixes are strictly sequential. This is the same file-conflict rule as `/ralph-loop`.
-- **Checkpoints are asymmetric by design.** Gaps after design → converse, then ask. Critique resolved → always ask before the loop. Everything else proceeds automatically. Do not invent extra approval gates, and never skip the pre-loop one.
+- **Stopping is the exception, not the default.** `/ralph-auto` exists to run design → plan → critique → loop → review as far as it can without interrupting the user. Stop only when a decision genuinely requires their judgment — a trade-off, a fork in the deliverable, a fact you cannot obtain. Never stop merely to confirm, summarize, or seek permission to continue; announce and proceed instead. Do not invent approval gates that this skill does not name. When you do have to stop, ask everything you need in one exchange rather than spreading it across several.
 - **The artifacts are the state machine.** Every resolution marker you write is what makes the run resumable. Never track progress only in conversation.
 - **Mid-run user input is first-class.** If the user redirects you between phases ("actually, make the plan smaller"), fold it into the ledger, apply it to the current or upcoming phase, and note when it would invalidate an existing artifact (e.g., a plan change after the critique → offer to re-run the critique).
 

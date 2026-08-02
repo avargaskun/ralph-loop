@@ -127,6 +127,16 @@ Each finding should include:
 4. What the code actually does or what the correct analysis is.
 5. A concrete suggestion for how to fix it.
 
+**Make the fix directly actionable.** Findings are consumed by an agent that will apply them without asking anyone. Write the suggestion so it can be acted on from the documents and the code alone — name the file, the phase, and the concrete change. Avoid "consider whether…" or "the author should decide…" phrasing when you have enough information to recommend one option; recommend it and say why.
+
+**Human-judgment marker.** If — and only if — the fix genuinely turns on something no agent can settle from the repo (a product or priority trade-off, a fork that changes what gets built, a fact only the user knows), add this line to the finding:
+
+```
+> **Needs human judgment:** <the specific question, and the options if they are discrete>
+```
+
+Default to *not* marking. Size, severity, and your own preference for confirmation are not reasons to mark a finding — a finding you could resolve yourself given the design and the code does not carry this line. Over-marking stalls automated runs on decisions that did not need a human.
+
 ---
 
 ## Tone and Calibration
@@ -154,4 +164,4 @@ Files created/modified:
 - ralph/projects/<project-name>/<design-critique.md or plan-critique.md>
 ```
 
-Then summarize the finding counts by severity and highlight the most important one.
+Then summarize the finding counts by severity, state how many carry a **Needs human judgment** line (say "none" when that is the case), and highlight the most important finding.
