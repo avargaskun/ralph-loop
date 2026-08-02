@@ -14,7 +14,7 @@ git clone https://github.com/avargaskun/ralph-loop ~/.ralph
 
 ## SDLC Workflow
 
-Ralph projects follow a six-phase lifecycle: **Design → Plan → Critique → Execute → Review → Address**.
+Ralph projects follow a five-phase lifecycle: **Design → Plan → Critique → Execute → Review**.
 
 ```
 /ralph-design my-feature    # 1. Create design.md interactively
@@ -23,7 +23,6 @@ Ralph projects follow a six-phase lifecycle: **Design → Plan → Critique → 
 ralph my-feature            # 4. Execute the plan autonomously (shell-based)
 /ralph-loop my-feature      # 4. OR execute in-session (for SSO/PortKey users)
 /ralph-review my-feature    # 5. Review the implementation
-/ralph-address my-feature   # 6. Fix review findings
 ```
 
 Or run the whole lifecycle from a single command — see [Automated flow](#automated-flow--ralph-auto-project-name-instructions):
@@ -86,9 +85,7 @@ Each subagent executes exactly one phase, then stops. The main agent detects the
 
 After all phases complete, guides Claude to produce `ralph/projects/<name>/review.md`: a full code review reading the design, plan observations, all changed files, and git diffs. Findings are categorized as Critical / Important / Trivial with a design compliance checklist and test coverage assessment.
 
-### 6. Address — `/ralph-address [project-name]`
-
-Guides Claude to fix findings from `review.md` sequentially — one finding at a time using sub-agents to preserve context. Each fix is followed by a build verification and a `> **Resolution:**` blockquote appended to the finding in the review document.
+To fix the findings, iterate on them in normal conversation — or run `/ralph-auto <project-name>`, which detects the unresolved review and resumes at its address step, fixing findings sequentially with per-finding subagents and raising judgment calls to you.
 
 ### Automated flow — `/ralph-auto [project-name] [instructions]`
 
@@ -103,9 +100,9 @@ How it flows:
 
 1. **Design** runs interactively in your session. If you asked for a brainstorm — or the draft surfaces gaps or an ambiguous choice that could lead down very different paths — Claude discusses the alternatives with you and asks before moving on. A clean design continues to planning automatically.
 2. **Plan** and **critique** run as background subagents while the coordinator stays responsive.
-3. **Critique findings** are triaged: unambiguous ones are fixed one at a time, judgment calls are raised to you. Claude always asks before starting the loop — the last checkpoint before code gets written.
+3. **Critique findings** are triaged: unambiguous ones are fixed one at a time, judgment calls are raised to you. If nothing needed your judgment, the loop starts automatically; if something did, Claude asks whether to start the loop in that same exchange. (Say "check with me before starting the loop" in the instructions to always get the checkpoint.)
 4. **Execution** uses the in-session loop (the same machinery as `/ralph-loop`). Blocked phases and manual steps are raised to you.
-5. If the loop runs to completion, **review** runs as a subagent and its findings are triaged the same way — unambiguous fixes are applied sequentially, `/ralph-address`-style, and the rest come to you.
+5. If the loop runs to completion, **review** runs as a subagent and its findings are triaged the same way — unambiguous fixes are applied sequentially by per-finding subagents, and the rest come to you.
 
 The run is resumable: state lives entirely in the project artifacts, which are committed after every step. If a run is interrupted, re-run `/ralph-auto <project-name>` and it picks up where it left off — an existing `design.md` skips to planning, an existing `plan.md` skips to critique, unresolved findings resume the triage, and so on. This also means you can mix `/ralph-auto` freely with the individual commands.
 
@@ -148,7 +145,7 @@ Use `npm run build` to compile and `npm test` to run the test suite.
 All new TypeScript files must be registered in tsconfig.json.
 ```
 
-The authoring/review skills (`/ralph-explore`, `/ralph-design`, `/ralph-plan`, `/ralph-critique`, `/ralph-review`, `/ralph-address`) also read this file as background context — e.g., `/ralph-plan` takes the build/test gate commands from it instead of asking — so shared facts like build commands only need to be written here once.
+The authoring/review skills (`/ralph-explore`, `/ralph-design`, `/ralph-plan`, `/ralph-critique`, `/ralph-review`, `/ralph-auto`) also read this file as background context — e.g., `/ralph-plan` takes the build/test gate commands from it instead of asking — so shared facts like build commands only need to be written here once.
 
 ### Per-skill extensions (`ralph/EXTENSIONS.md`)
 
@@ -170,7 +167,7 @@ Cap phases at 6 tasks — this codebase's build is slow.
 Check the accessibility checklist in docs/a11y.md for any UI change.
 ```
 
-Available sections: `## General`, `## Explore`, `## Design`, `## Plan`, `## Critique`, `## Review`, `## Address`, `## Auto`. The content extends the skills — it never replaces their protocol (output files, document structure, signals). This file is **never** injected into execution subagents; executors only receive `ralph/PROMPT.md`.
+Available sections: `## General`, `## Explore`, `## Design`, `## Plan`, `## Critique`, `## Review`, `## Auto`. The content extends the skills — it never replaces their protocol (output files, document structure, signals). This file is **never** injected into execution subagents; executors only receive `ralph/PROMPT.md`.
 
 **Where does a rule go?**
 
@@ -211,7 +208,6 @@ Renders the JSONL stream as colored human-readable output: thinking blocks (gray
     ├── ralph-critique.md
     ├── ralph-loop.md
     ├── ralph-review.md
-    ├── ralph-address.md
     └── ralph-auto.md
 ```
 

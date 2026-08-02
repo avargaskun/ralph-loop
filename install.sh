@@ -90,6 +90,16 @@ if [ "$INSTALL_METHOD" = "copy" ]; then
     echo "        after pulling new versions to refresh them."
 fi
 
+# Remove installed links/copies for skills that no longer exist in the repo
+RETIRED_SKILLS="ralph-address.md"
+for retired in $RETIRED_SKILLS; do
+    target="$CLAUDE_COMMANDS_DIR/$retired"
+    if [ -L "$target" ] || [ -f "$target" ]; then
+        rm -f "$target"
+        echo "  removed retired skill: $target"
+    fi
+done
+
 # ── Step 3: Add ~/.ralph/bin to PATH ──────────────────────────
 echo ""
 echo "→ Configuring PATH..."
@@ -130,7 +140,7 @@ echo "  1. Open a new terminal (or: source $RC_FILE)"
 echo "  2. In any project, run: ralph <project-name>"
 echo "  3. Use /ralph-explore, /ralph-design, /ralph-plan,"
 echo "     /ralph-critique, /ralph-loop, /ralph-review,"
-echo "     /ralph-address, /ralph-auto in Claude Code"
+echo "     /ralph-auto in Claude Code"
 echo ""
 echo "  To update later:  ralph update"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

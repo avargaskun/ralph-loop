@@ -57,7 +57,7 @@ State lives in the artifacts, not in your memory. On every start (fresh or resum
 | `review.md` exists with findings lacking a `> **Resolution:**` | Step 7 — resume addressing findings |
 | All review findings resolved | Report the run as complete |
 
-A finding counts as resolved when its title line carries `— **FIXED**` (or an equivalent marker) and a `> **Resolution:**` blockquote follows it — the same convention `/ralph-address` uses. Steps 4 and 7 must record resolutions this way precisely so that resumption can detect them.
+A finding counts as resolved when its title line carries `— **FIXED**` (or an equivalent marker) and a `> **Resolution:**` blockquote follows it. Steps 4 and 7 must record resolutions this way precisely so that resumption can detect them.
 
 Announce the detected state and your entry point before continuing. If artifacts look inconsistent (e.g., a `plan-critique.md` older than the `plan.md` it critiques — compare git history if unsure), point it out and ask the user how to proceed rather than guessing.
 
@@ -68,7 +68,7 @@ Two execution modes, chosen per step:
 - **In your own context** (Steps 1, 4, 5, 7): read the relevant skill file from `~/.ralph/commands/` and follow its instructions directly, as if the user had invoked it. These steps either require conversation with the user or are themselves coordinators.
 - **Background subagent** (Steps 2, 3, 6, and per-finding fixes in Step 7): spawn ONE agent at a time with `run_in_background: true`. Never run two ralph subagents concurrently — they conflict on files.
 
-Every phase subagent prompt must include:
+Every phase subagent prompt (Steps 2, 3, 6 — Step 7's per-finding fix prompts are specified inline in Step 7) must include:
 
 1. The instruction to read `~/.ralph/commands/ralph-<skill>.md` and follow it in full, with `$ARGUMENTS` set to `<project-name> <relevant guidance from the ledger>`.
 2. This headless override: *"You are running non-interactively. Never ask the user anything and never wait for input. Wherever the skill says to ask the user, instead make the most defensible choice you can from the repo (`ralph/PROMPT.md`, `CLAUDE.md`, the design), record it, and — if the choice genuinely needs human judgment — add it to the artifact's Open Questions section and continue. Your final message must list the artifact(s) you wrote and any Open Questions you added."*
@@ -82,7 +82,7 @@ Every phase subagent prompt must include:
 
 While a subagent runs, remain responsive: answer questions, give status, and accept new guidance into the ledger.
 
-**Committing artifacts.** At the end of every step, commit the artifacts that step created or modified to the current branch — unless a file is untracked by policy (respect `.gitignore`; check with `git check-ignore` when unsure, and never force-add an ignored file). This includes the resolution edits from Step 4, so the loop's phase commits start from a clean tree. Use a brief message naming the project and step, e.g. `docs: ralph <project-name> — plan critique resolutions`. Loop iterations commit their own work, and Step 7 keeps the `/ralph-address` commit convention.
+**Committing artifacts.** At the end of every step, commit the artifacts that step created or modified to the current branch — unless a file is untracked by policy (respect `.gitignore`; check with `git check-ignore` when unsure, and never force-add an ignored file). This includes the resolution edits from Step 4, so the loop's phase commits start from a clean tree. Use a brief message naming the project and step, e.g. `docs: ralph <project-name> — plan critique resolutions`. Loop iterations commit their own work, and Step 7 commits its fixes as `chore: Address review findings for <project-name>`.
 
 ---
 
@@ -144,14 +144,22 @@ Only when the loop ran to completion (plan `Status` complete, all phases checked
 
 ## Step 7: Address review findings
 
-Read the review in full, then triage findings with the same three buckets and the same escalation bar as Step 4 — including its `> **Needs human judgment:**` markers as hints to verify, not orders to escalate. Two things weigh differently here than in Step 4: these fixes change **code** rather than documents, so a wrong call lands in the repo; and a finding that says the *design* was wrong is a fork in the deliverable, not a bug — raise those. Execute the rest the `/ralph-address` way:
+Read the review in full, then triage findings with the same three buckets and the same escalation bar as Step 4 — including its `> **Needs human judgment:**` markers as hints to verify, not orders to escalate. Two things weigh differently here than in Step 4: these fixes change **code** rather than documents, so a wrong call lands in the repo; and a finding that says the *design* was wrong is a fork in the deliverable, not a bug — raise those.
 
-- For each unambiguous finding, **sequentially**, spawn a background subagent that reads `~/.ralph/commands/ralph-address.md` and applies its per-finding methodology to that single finding: read the code, implement a minimal fix, run the project's build + tests, and update `review.md` with the resolution blockquote. One finding per subagent; never in parallel. Process in severity order (Critical → Important → Trivial).
+Execute the rest with per-finding subagents:
+
+- For each unambiguous finding, **sequentially**, spawn a background subagent scoped to that single finding. Its prompt must contain the finding's full text (title, file/line, description, suggested fix) plus this methodology:
+  1. Read the full files the finding references, and `ralph/PROMPT.md` / `CLAUDE.md` for build/test commands and conventions.
+  2. Implement a **minimal, targeted fix**. Follow the review's suggested fix if it holds up against the code. Do not refactor surrounding code and do not go looking for new issues.
+  3. Run the project's build + tests. Do not report success if they fail.
+  4. Update `ralph/projects/<project-name>/review.md`: append `— **FIXED**` to the finding's title line and a `> **Resolution:**` blockquote below its original text describing what changed. Never alter or remove the original finding text.
+  5. If mid-fix it turns out the fix requires a decision that cannot be made from the repo, stop without half-applying it: revert incomplete edits, leave the finding unmarked (no `— **FIXED**`, no `> **Resolution:**` — resumption must still see it as unresolved), and report the question as the final output.
+- One finding per subagent; never in parallel. Process in severity order (Critical → Important → Trivial).
 - Raise judgment-call findings to the user after the unambiguous ones are done; their answers turn into fixes executed the same way, or into `Accepted as-is` resolutions.
-- If a subagent reports a finding left unfixed because it needed a decision it could not ask about, your triage missed one — add it to the judgment-call set and raise it rather than re-dispatching it.
+- If a subagent reports back a question instead of a fix, your triage missed one — add it to the judgment-call set and raise it rather than re-dispatching it.
 - `review.md` must be updated as each finding lands — it is the resumption record for this step.
 
-When all findings are resolved, commit per the `/ralph-address` convention (`chore: Address review findings for <project-name>`), following the repo's staging rules.
+When all findings are resolved, commit with `chore: Address review findings for <project-name>`, following the repo's staging rules.
 
 ---
 

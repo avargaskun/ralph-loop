@@ -28,7 +28,7 @@ Ralph-loop has two distinct functional layers that require different distributio
 
 ### Layer 1 — Interactive Guide Phases
 
-The Design, Plan, Critique, Review, and Address phases are human-in-the-loop activities: the developer invokes a Claude Code slash command, Claude produces an artifact (a design doc, a plan, a critique, a review), and the developer reads and refines it interactively.
+The Design, Plan, Critique, and Review phases are human-in-the-loop activities: the developer invokes a Claude Code slash command, Claude produces an artifact (a design doc, a plan, a critique, a review), and the developer reads and refines it interactively.
 
 These phases map naturally to **Claude Code skills** — markdown prompt files stored in `~/.claude/commands/`. A skill is invoked with `/skill-name` in any Claude Code conversation and expands to the full prompt, with no per-project files needed.
 
@@ -40,7 +40,6 @@ These phases map naturally to **Claude Code skills** — markdown prompt files s
 | `/ralph-plan` | Guide Claude to produce a phased execution plan |
 | `/ralph-critique` | Guide Claude to critically review design/plan before execution |
 | `/ralph-review` | Guide Claude to review completed implementation |
-| `/ralph-address` | Guide Claude to fix findings from a review |
 | `/ralph-auto` | Coordinate the full design → plan → critique → loop → review flow |
 
 ### Layer 2 — Autonomous Loop
@@ -119,7 +118,6 @@ cd ~/.ralph && git checkout v1.2.0
     ├── ralph-critique.md
     ├── ralph-loop.md
     ├── ralph-review.md
-    ├── ralph-address.md
     └── ralph-auto.md
 ```
 
@@ -184,14 +182,14 @@ An **optional** file that project maintainers commit to their repository. It is 
 
 If `ralph/PROMPT.md` is absent, the loop runs with only the generic prompt. This is the correct behavior for most projects.
 
-The addendum is also read **as background context** (not appended) by the authoring/review skills (`/ralph-explore`, `/ralph-design`, `/ralph-plan`, `/ralph-critique`, `/ralph-review`, `/ralph-address`), so shared facts such as build/test commands are written once and seen by every phase of the SDLC.
+The addendum is also read **as background context** (not appended) by the authoring/review skills (`/ralph-explore`, `/ralph-design`, `/ralph-plan`, `/ralph-critique`, `/ralph-review`, `/ralph-auto`), so shared facts such as build/test commands are written once and seen by every phase of the SDLC.
 
 ### 3. Per-Skill Extensions (`ralph/EXTENSIONS.md` in the repo)
 
 An **optional** file that extends the authoring/review skills the same way the addendum extends the executor. Two different consumption models drive the two-file split:
 
 - The executor path consumes its extension by **verbatim prompt injection** (including via a plain shell script), so `ralph/PROMPT.md` stays a whole-file contract with no internal structure to parse.
-- The interactive skills are **intelligent readers**, so `ralph/EXTENSIONS.md` can be one shared file organized in sections — each skill reads `## General` plus the section matching its name (`## Explore`, `## Design`, `## Plan`, `## Critique`, `## Review`, `## Address`, `## Auto`) and ignores the rest.
+- The interactive skills are **intelligent readers**, so `ralph/EXTENSIONS.md` can be one shared file organized in sections — each skill reads `## General` plus the section matching its name (`## Explore`, `## Design`, `## Plan`, `## Critique`, `## Review`, `## Auto`) and ignores the rest.
 
 Rules, mirroring the addendum:
 
@@ -303,13 +301,9 @@ Instructs Claude to critically review the design and/or plan before execution be
 
 Instructs Claude to review completed implementation by reading the design, plan (including all observations), all changed files, and git diffs. Produces findings categorized as Critical / Important / Trivial, a design compliance checklist, and a test coverage assessment. Verdict is one of: Approved / Approved with Minor Findings / Needs Work / Rejected.
 
-### `/ralph-address` — Fix Review Findings Guide
-
-Instructs Claude to process findings from `review.md` sequentially: read each finding, implement the fix, build to verify, and append a `> **Resolution:**` blockquote directly below the finding in `review.md` — preserving the original finding text intact. Findings are processed one at a time to avoid file conflicts.
-
 ### `/ralph-auto` — Full-Lifecycle Coordinator
 
-Instructs Claude to coordinate the entire design → plan → critique → loop → review flow from a single command, orchestrating the other skills rather than reimplementing them. Design and the loop run in the coordinator's own context; plan, critique, review, and per-finding fixes run as sequential background subagents carrying a headless override (never ask the user — record Open Questions in the artifact instead). User checkpoints are asymmetric: a design with gaps (or a requested brainstorm) triggers a conversation and an explicit ask before planning, a clean design continues automatically, and the loop never starts without an explicit yes after all critique findings are resolved. Critique and review findings are triaged into unambiguous (fixed sequentially, resolutions recorded with the `/ralph-address` blockquote convention) versus judgment calls (raised to the user). State lives entirely in the project artifacts, committed after every step, so an interrupted run resumes from the first incomplete artifact — and mixes freely with manual skill invocations. Every phase defaults to the coordinator's own model unless the user names an override for a specific phase.
+Instructs Claude to coordinate the entire design → plan → critique → loop → review flow from a single command, orchestrating the other skills rather than reimplementing them. Design and the loop run in the coordinator's own context; plan, critique, review, and per-finding fixes run as sequential background subagents carrying a headless override (never ask the user — record Open Questions in the artifact instead). Stopping is the exception: a design with gaps (or a requested brainstorm) triggers a conversation, and after critique findings are resolved the loop starts automatically unless a finding genuinely needed the user's judgment or the user requested a checkpoint — the coordinator asks only when a real decision needs a human, never merely for permission to continue. Critique and review findings are triaged into unambiguous (fixed sequentially, resolutions recorded as `— **FIXED**` markers with `> **Resolution:**` blockquotes that preserve the original finding text) versus judgment calls (raised to the user); review fixes are applied by per-finding subagents that build and test after each change. State lives entirely in the project artifacts, committed after every step, so an interrupted run resumes from the first incomplete artifact — and mixes freely with manual skill invocations. Every phase defaults to the coordinator's own model unless the user names an override for a specific phase.
 
 ---
 
