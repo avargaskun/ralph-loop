@@ -52,7 +52,7 @@ State lives in the artifacts, not in your memory. On every start (fresh or resum
 | `design.md` complete; no `plan.md` | Step 2 (plan) |
 | `plan.md` exists; no `plan-critique.md` | Step 3 (critique) |
 | `plan-critique.md` exists with findings not yet marked resolved | Step 4 — resume addressing findings |
-| Critique fully resolved; plan `Status` is not complete | Step 5 (loop) — the pre-loop checkpoint still applies |
+| Critique fully resolved; plan `Status` is not complete | Step 5 (loop) — re-invocation counts as consent to start the loop; still ask first if the ledger or `ralph/EXTENSIONS.md` carries a checkpoint request |
 | Plan complete; no `review.md` | Step 6 (review) |
 | `review.md` exists with findings lacking a `> **Resolution:**` | Step 7 — resume addressing findings |
 | All review findings resolved | Report the run as complete |
